@@ -46,6 +46,8 @@ button.g,a.g{background:transparent;color:var(--pri);border:1px solid var(--pri)
 <h1>💊 Rute Antar Obat</h1>
 <p class="s">Masukkan data pasien (sampai 30), lalu aplikasi menyusun urutan antar yang paling dekat.</p>
 
+<div class="card" style="text-align:center"><div id="tgl" style="color:var(--mut);font-size:13px">&nbsp;</div><div id="jam" style="font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:1px">--:--:--</div></div>
+
 <div class="card">
 <label>Mulai antar dari mana?</label>
 <label style="font-weight:500;display:flex;gap:8px;align-items:center;margin:6px 0"><input type="radio" name="sm" value="rs" checked style="width:auto"> 🏥 Dari RS</label>
@@ -85,6 +87,15 @@ button.g,a.g{background:transparent;color:var(--pri);border:1px solid var(--pri)
 <div class="hint">{nama} dan {alamat} otomatis terisi. Pasien juga diminta mengirim <i>share location</i>, lalu Anda tinggal salin koordinatnya ke daftar.</div>
 </div>
 <div id="out"></div>
+
+<div class="card" id="rekap">
+<label>📒 Rekap harian (catatan)</label>
+<input type="date" id="rd" style="margin-bottom:8px">
+<div id="rsum"></div>
+<div class="row"><button class="g" id="rcopy">Salin rekap</button><button class="g" id="rdel">Hapus rekap tanggal ini</button></div>
+<div class="hint">Rekap mencatat pasien yang Anda tandai ✓ Selesai, lengkap dengan jam sampai detik. Tersimpan di HP dan tidak ikut terhapus saat "Hapus semua" pasien.</div>
+<div id="rhist" style="margin-top:8px"></div>
+</div>
 <p class="hint" style="text-align:center;margin:18px 0 6px">Aplikasi dibuat oleh <b>Azkkka</b></p>
 </main>
 <script>
@@ -127,13 +138,13 @@ if(s)g+='<rect x="'+(X(s)-7)+'" y="'+(Y(s)-7)+'" width="14" height="14" rx="3" f
 path.forEach((p,i)=>{g+='<circle cx="'+X(p)+'" cy="'+Y(p)+'" r="9" fill="var(--pri)"/><text x="'+X(p)+'" y="'+(+Y(p)+3.5)+'" text-anchor="middle" font-size="10" font-weight="700" fill="var(--pri-tx)">'+(i+1)+'</text>'});
 return g+'</svg><div class="hint" style="margin:0 0 8px">Denah sebaran titik (tanpa jalan), utara di atas. ■ = titik awal.</div>'}
 const q=x=>x.ok?x.lat+','+x.lng:encodeURIComponent(x.addr||x.name);
-let state={path:[],bad:[],s:null,done:{},conf:{}};
+let state={path:[],bad:[],s:null,done:{},dt:{},conf:{}};
 function render(){
 const {path,bad,s}=state;let tot=0,p=s,rows='';
 path.forEach((x,i)=>{const d=p?hav(p,x):0;tot+=d;p=x;x.d=d;x.cum=tot});
 let html='<div class="card"><div class="sum">'+path.length+' tujuan · total ≈ '+tot.toFixed(1)+' km (perkiraan jalan)</div>'+mapSvg(path,s);
 path.forEach((x,i)=>{const k=x.name+i;
-html+='<div class="stop'+(state.done[k]?' done':'')+'"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(x.name)+'</div><div class="ad">'+esc(x.addr)+'</div><div class="dist">+'+x.d.toFixed(1)+' km dari sebelumnya · total '+x.cum.toFixed(1)+' km</div>'
+html+='<div class="stop'+(state.done[k]?' done':'')+'"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(x.name)+'</div><div class="ad">'+esc(x.addr)+'</div><div class="dist">+'+x.d.toFixed(1)+' km dari sebelumnya · total '+x.cum.toFixed(1)+' km</div>'+(state.done[k]?'<div class="dist">✔ Selesai pukul '+(state.dt[k]||'')+'</div>':'')
 +'<div class="row"><a class="b" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+q(x)+'">Navigasi</a><button class="g" data-k="'+esc(k)+'">'+(state.done[k]?'Batal':'✓ Selesai')+'</button></div><div class="row">'+contact(x,k)+'</div></div></div>'});
 html+='</div>';
 if(path.length){html+='<div class="card"><label>Buka seluruh rute di Google Maps</label><div class="hint">Google Maps membatasi 9 titik per rute, jadi dibagi per kelompok.</div><div class="row">';
@@ -143,8 +154,8 @@ html+='<a class="b g" target="_blank" rel="noopener" href="https://www.google.co
 html+='</div></div>'}
 if(bad.length)html+='<div class="card"><div class="warn">⚠ '+bad.length+' pasien tanpa lokasi, tidak ikut disusun urutannya (tetap bisa dicari lewat alamat):</div>'+bad.map((x,i)=>'<div class="stop"><div class="no">?</div><div style="flex:1"><div class="nm">'+esc(x.name)+'</div><div class="ad">'+esc(x.addr)+'</div><div class="row"><a class="b g" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination='+q(x)+'">Cari di Maps</a></div><div class="row">'+contact(x,x.name+'b'+i)+'</div></div></div>').join('')+'</div>';
 $('out').innerHTML=html;
-document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{state.conf[b.dataset.c]=!state.conf[b.dataset.c];render()});
-document.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{state.done[b.dataset.k]=!state.done[b.dataset.k];render()})}
+document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{const c=b.dataset.c;state.conf[c]=!state.conf[c];const x=state.path.find((p,i)=>p.name+i===c);if(x)logConf(x,state.conf[c]);render()});
+document.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;state.done[k]=!state.done[k];const x=state.path.find((p,i)=>p.name+i===k);if(x)logDone(k,state.done[k],x);render()})}
 function esc(t){return String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 const mode=()=>document.querySelector('input[name=sm]:checked').value;
 function showMode(){const g=mode()==='gps';$('rsbox').style.display=g?'none':'block';$('gpsbox').style.display=g?'block':'none'}
@@ -152,8 +163,8 @@ document.querySelectorAll('input[name=sm]').forEach(r=>r.onchange=()=>{showMode(
 function save(){try{localStorage.setItem('rao2',JSON.stringify({p:pts,s:$('start').value,t:$('tpl').value,m:mode()}))}catch(e){}}
 function run(s){const all=parse(),good=all.filter(x=>x.ok),bad=all.filter(x=>!x.ok);
 if(!good.length){$('out').innerHTML='<div class="card warn">Belum ada pasien yang lokasinya diisi. Tambahkan lokasi dari Google Maps dulu.</div>';return}
-state={path:order(good,s||good[0]),bad,s,done:{},conf:{}};
-render();$('out').scrollIntoView({behavior:'smooth'})}
+state={path:order(good,s||good[0]),bad,s,done:{},dt:{},conf:{}};
+render();logRoute(state.path.length,state.path.length?state.path[state.path.length-1].cum:0);$('out').scrollIntoView({behavior:'smooth'})}
 $('go').onclick=()=>{save();
 if(mode()==='rs'){const s=coord($('start').value);if(!s&&!confirm('Lokasi RS belum diisi. Rute akan dimulai dari pasien pertama. Lanjut?'))return;run(s);return}
 if(!navigator.geolocation){alert('GPS tidak tersedia di HP ini. Pilih "Dari RS".');return}
@@ -176,6 +187,47 @@ try{const d=JSON.parse(localStorage.getItem('rao2')||'null');if(d){pts=d.p||[];$
 showMode();
 drawList();
 if(!$('tpl').value)$('tpl').value=DEF;$('tpl').onchange=save;
+
+/* ===== Jam, tanggal, rekap harian ===== */
+const pad=n=>String(n).padStart(2,'0');
+const HARI=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'],BLN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const dkey=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const tm=d=>pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+const fmtTgl=k=>{const a=k.split('-').map(Number),t=new Date(a[0],a[1]-1,a[2]);return HARI[t.getDay()]+', '+a[2]+' '+BLN[a[1]-1]+' '+a[0]};
+function tick(){const n=new Date();$('tgl').textContent=fmtTgl(dkey(n));$('jam').textContent=tm(n)+(n.getTimezoneOffset()===-420?' WIB':'')}
+setInterval(tick,1000);tick();
+let LOG={};try{LOG=JSON.parse(localStorage.getItem('rao3-log')||'{}')}catch(e){}
+function saveLog(){try{localStorage.setItem('rao3-log',JSON.stringify(LOG))}catch(e){}}
+const dayOf=k=>LOG[k]||(LOG[k]={rute:[],sel:[]});
+const ekey=(d,x)=>d+'|'+x.name+'|'+x.addr;
+function logRoute(n,km){const now=new Date();dayOf(dkey(now)).rute.push({t:tm(now),n:n,km:+(km||0).toFixed(1)});saveLog();drawRekap()}
+function logDone(k,on,x){const now=new Date(),d=dkey(now),D=dayOf(d),id=ekey(d,x);D.sel=D.sel.filter(e=>e.k!==id);
+if(on){state.dt[k]=tm(now);D.sel.push({k:id,name:x.name,addr:x.addr,t:state.dt[k],c:!!state.conf[k]})}else delete state.dt[k];
+saveLog();drawRekap()}
+function logConf(x,v){const d=dkey(new Date()),e=(LOG[d]?LOG[d].sel:[]).find(e=>e.k===ekey(d,x));if(e){e.c=!!v;saveLog();drawRekap()}}
+function rekapData(){const k=$('rd').value||dkey(new Date()),D=LOG[k]||{rute:[],sel:[]};
+return {k:k,D:D,sel:D.sel.slice().sort((a,b)=>a.t<b.t?-1:a.t>b.t?1:0)}}
+function drawRekap(){const r=rekapData(),D=r.D,sel=r.sel,conf=sel.filter(e=>e.c).length,lr=D.rute[D.rute.length-1];
+let h='<div class="sum">'+fmtTgl(r.k)+'</div><div style="font-size:14px;margin-bottom:6px">Sudah diantar: <b>'+sel.length+'</b>'+(lr?' dari '+lr.n+' pasien':'')+' · Alamat terkonfirmasi: <b>'+conf+'</b></div>';
+if(sel.length)h+='<div class="ad">Pengantaran pertama '+sel[0].t+' · terakhir '+sel[sel.length-1].t+'</div>';
+D.rute.forEach(x=>{h+='<div class="ad">Rute disusun pukul '+x.t+' ('+x.n+' pasien, ≈ '+x.km+' km)</div>'});
+h+=sel.map((e,i)=>'<div class="stop"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(e.name)+'</div><div class="ad">'+esc(e.addr)+'</div><div class="dist">Pukul '+e.t+(e.c?' · alamat terkonfirmasi':'')+'</div></div></div>').join('')||'<div class="hint">Belum ada pengantaran tercatat pada tanggal ini.</div>';
+$('rsum').innerHTML=h;
+const ks=Object.keys(LOG).filter(k=>LOG[k].sel.length||LOG[k].rute.length).sort().reverse().slice(0,30);
+$('rhist').innerHTML=ks.length?'<div class="hint">Riwayat tanggal (tekan untuk membuka):</div><div class="row">'+ks.map(k=>'<button class="g" data-d="'+k+'">'+k.slice(8)+'/'+k.slice(5,7)+' ('+LOG[k].sel.length+')</button>').join('')+'</div>':'';
+document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{$('rd').value=b.dataset.d;drawRekap()})}
+function rekapText(){const r=rekapData(),D=r.D,sel=r.sel,lr=D.rute[D.rute.length-1];
+let t='REKAP ANTAR OBAT\n'+fmtTgl(r.k)+'\n';
+if(lr)t+='Rute disusun pukul '+lr.t+' ('+lr.n+' pasien, sekitar '+lr.km+' km)\n';
+t+='Sudah diantar: '+sel.length+(lr?' dari '+lr.n:'')+'\nAlamat terkonfirmasi: '+sel.filter(e=>e.c).length+'\n';
+if(sel.length)t+='Pertama '+sel[0].t+', terakhir '+sel[sel.length-1].t+'\n';
+return t+'\n'+sel.map((e,i)=>(i+1)+'. '+e.t+' - '+e.name+(e.addr?' ('+e.addr+')':'')+(e.c?' [alamat OK]':'')).join('\n')}
+$('rd').value=dkey(new Date());$('rd').onchange=drawRekap;
+$('rcopy').onclick=()=>{const t=rekapText();
+const fb=()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');alert('Rekap disalin.')}catch(e){alert('Gagal menyalin. Salin manual dari layar.')}a.remove()};
+if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>alert('Rekap disalin.'),fb);else fb()};
+$('rdel').onclick=()=>{const k=$('rd').value;if(LOG[k]&&confirm('Hapus rekap tanggal '+fmtTgl(k)+'?')){delete LOG[k];saveLog();drawRekap()}};
+drawRekap();
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
