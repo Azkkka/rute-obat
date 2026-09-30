@@ -6,11 +6,6 @@
 <title>Rute Antar Obat</title>
 <meta name="author" content="Azkkka">
 <meta name="theme-color" content="#0f8a76">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Rute Obat">
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 --bg:#f4f7f6;--card:#fff;--tx:#12302b;--mut:#5d7570;--pri:#0f8a76;--pri-tx:#fff;--bd:#d8e3e0;--ok:#e3f4ee}
@@ -297,6 +292,5 @@ $('sreset').onclick=()=>{if(!confirm('Kembalikan tema, GPS, dan layar pembuka ke
 applyTheme();applyGps();drawLoad();
 if(loadImg()&&SET.splash!==false)showLoad('Rute Antar Obat',1600);
 </script>
-<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
 </html>
