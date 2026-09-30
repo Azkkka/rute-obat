@@ -39,6 +39,10 @@ button.g,a.g{background:transparent;color:var(--pri);border:1px solid var(--pri)
 .dist{font-size:12px;color:var(--pri);font-weight:600}
 .sum{background:var(--ok);border-radius:10px;padding:8px 10px;font-weight:600;margin-bottom:8px}
 .warn{color:#c0392b;font-size:13px}
+main{padding-bottom:88px}
+#tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px);z-index:5}
+#tabs .tab{flex:1;background:transparent;color:var(--mut);border-radius:0;padding:14px 8px;font-size:15px;border-top:3px solid transparent}
+#tabs .tab.on{color:var(--pri);border-top-color:var(--pri)}
 </style>
 </head>
 <body>
@@ -48,6 +52,7 @@ button.g,a.g{background:transparent;color:var(--pri);border:1px solid var(--pri)
 
 <div class="card" style="text-align:center"><div id="tgl" style="color:var(--mut);font-size:13px">&nbsp;</div><div id="jam" style="font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:1px">--:--:--</div></div>
 
+<div id="pg-rute">
 <div class="card">
 <label>Mulai antar dari mana?</label>
 <label style="font-weight:500;display:flex;gap:8px;align-items:center;margin:6px 0"><input type="radio" name="sm" value="rs" checked style="width:auto"> 🏥 Dari RS</label>
@@ -87,17 +92,28 @@ button.g,a.g{background:transparent;color:var(--pri);border:1px solid var(--pri)
 <div class="hint">{nama} dan {alamat} otomatis terisi. Pasien juga diminta mengirim <i>share location</i>, lalu Anda tinggal salin koordinatnya ke daftar.</div>
 </div>
 <div id="out"></div>
+</div>
 
+<div id="pg-rekap" style="display:none">
 <div class="card" id="rekap">
-<label>📒 Rekap harian (catatan)</label>
+<label>📒 Rekap harian</label>
 <input type="date" id="rd" style="margin-bottom:8px">
 <div id="rsum"></div>
-<div class="row"><button class="g" id="rcopy">Salin rekap</button><button class="g" id="rdel">Hapus rekap tanggal ini</button></div>
-<div class="hint">Rekap mencatat pasien yang Anda tandai ✓ Selesai, lengkap dengan jam sampai detik. Tersimpan di HP dan tidak ikut terhapus saat "Hapus semua" pasien.</div>
+</div>
+<div class="card">
+<label>📝 Catatan hari ini (opsional)</label>
+<textarea id="rnote" style="min-height:80px" placeholder="Contoh: Jl. Godean macet, obat Bu Sari dititip ke satpam"></textarea>
+<div class="hint">Tersimpan otomatis saat Anda mengetik.</div>
+</div>
+<div class="card">
+<div class="row" style="margin-top:0"><button class="g" id="rcopy">Salin rekap</button><button class="g" id="rdel">Hapus rekap tanggal ini</button></div>
+<div class="hint">Rekap mencatat pasien yang Anda tandai ✓ Selesai di halaman Rute, lengkap dengan jam sampai detik. Tersimpan di HP ini dan tidak ikut terhapus saat "Hapus semua" pasien.</div>
 <div id="rhist" style="margin-top:8px"></div>
+</div>
 </div>
 <p class="hint" style="text-align:center;margin:18px 0 6px">Aplikasi dibuat oleh <b>Azkkka</b></p>
 </main>
+<nav id="tabs"><button class="tab on" data-p="rute">🚚 Rute</button><button class="tab" data-p="rekap">📒 Rekap</button></nav>
 <script>
 const $=id=>document.getElementById(id);
 const R=6371,ROAD=1.3;
@@ -212,8 +228,8 @@ let h='<div class="sum">'+fmtTgl(r.k)+'</div><div style="font-size:14px;margin-b
 if(sel.length)h+='<div class="ad">Pengantaran pertama '+sel[0].t+' · terakhir '+sel[sel.length-1].t+'</div>';
 D.rute.forEach(x=>{h+='<div class="ad">Rute disusun pukul '+x.t+' ('+x.n+' pasien, ≈ '+x.km+' km)</div>'});
 h+=sel.map((e,i)=>'<div class="stop"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(e.name)+'</div><div class="ad">'+esc(e.addr)+'</div><div class="dist">Pukul '+e.t+(e.c?' · alamat terkonfirmasi':'')+'</div></div></div>').join('')||'<div class="hint">Belum ada pengantaran tercatat pada tanggal ini.</div>';
-$('rsum').innerHTML=h;
-const ks=Object.keys(LOG).filter(k=>LOG[k].sel.length||LOG[k].rute.length).sort().reverse().slice(0,30);
+$('rsum').innerHTML=h;$('rnote').value=D.note||'';
+const ks=Object.keys(LOG).filter(k=>LOG[k].sel.length||LOG[k].rute.length||LOG[k].note).sort().reverse().slice(0,30);
 $('rhist').innerHTML=ks.length?'<div class="hint">Riwayat tanggal (tekan untuk membuka):</div><div class="row">'+ks.map(k=>'<button class="g" data-d="'+k+'">'+k.slice(8)+'/'+k.slice(5,7)+' ('+LOG[k].sel.length+')</button>').join('')+'</div>':'';
 document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{$('rd').value=b.dataset.d;drawRekap()})}
 function rekapText(){const r=rekapData(),D=r.D,sel=r.sel,lr=D.rute[D.rute.length-1];
@@ -221,13 +237,21 @@ let t='REKAP ANTAR OBAT\n'+fmtTgl(r.k)+'\n';
 if(lr)t+='Rute disusun pukul '+lr.t+' ('+lr.n+' pasien, sekitar '+lr.km+' km)\n';
 t+='Sudah diantar: '+sel.length+(lr?' dari '+lr.n:'')+'\nAlamat terkonfirmasi: '+sel.filter(e=>e.c).length+'\n';
 if(sel.length)t+='Pertama '+sel[0].t+', terakhir '+sel[sel.length-1].t+'\n';
-return t+'\n'+sel.map((e,i)=>(i+1)+'. '+e.t+' - '+e.name+(e.addr?' ('+e.addr+')':'')+(e.c?' [alamat OK]':'')).join('\n')}
+if(D.note)t+='Catatan: '+D.note+'\n';return t+'\n'+sel.map((e,i)=>(i+1)+'. '+e.t+' - '+e.name+(e.addr?' ('+e.addr+')':'')+(e.c?' [alamat OK]':'')).join('\n')}
 $('rd').value=dkey(new Date());$('rd').onchange=drawRekap;
 $('rcopy').onclick=()=>{const t=rekapText();
 const fb=()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');alert('Rekap disalin.')}catch(e){alert('Gagal menyalin. Salin manual dari layar.')}a.remove()};
 if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>alert('Rekap disalin.'),fb);else fb()};
 $('rdel').onclick=()=>{const k=$('rd').value;if(LOG[k]&&confirm('Hapus rekap tanggal '+fmtTgl(k)+'?')){delete LOG[k];saveLog();drawRekap()}};
 drawRekap();
+
+$('rnote').oninput=()=>{const k=$('rd').value||dkey(new Date());dayOf(k).note=$('rnote').value;saveLog()};
+function show(p){$('pg-rute').style.display=p==='rekap'?'none':'block';$('pg-rekap').style.display=p==='rekap'?'block':'none';
+document.querySelectorAll('#tabs .tab').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+if(p==='rekap'){if(!$('rd').value)$('rd').value=dkey(new Date());drawRekap()}
+window.scrollTo(0,0);try{history.replaceState(null,'','#'+p)}catch(e){}}
+document.querySelectorAll('#tabs .tab').forEach(b=>b.onclick=()=>show(b.dataset.p));
+show(location.hash==='#rekap'?'rekap':'rute');
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
