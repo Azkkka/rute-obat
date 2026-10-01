@@ -43,6 +43,31 @@ button.g,a.g{background:transparent;color:var(--pri);border:1px solid var(--pri)
 .spin{width:54px;height:54px;border:5px solid var(--bd);border-top-color:var(--pri);border-radius:50%;animation:sp .9s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 html,body{overscroll-behavior-y:contain}
+
+/* ===== Animasi & transisi halus ===== */
+html{scroll-behavior:smooth}
+body,.card{transition:background-color .3s ease,color .3s ease,border-color .3s ease}
+.card{animation:up .45s cubic-bezier(.2,.7,.2,1) both}
+.card:nth-of-type(2){animation-delay:.04s}.card:nth-of-type(3){animation-delay:.08s}.card:nth-of-type(4){animation-delay:.12s}
+#out .card,#rsum{animation:none}
+#out.anim .card{animation:up .45s cubic-bezier(.2,.7,.2,1) both}
+#out.anim .stop{animation:up .4s cubic-bezier(.2,.7,.2,1) both}
+#out.anim svg circle,#out.anim svg rect{animation:pop .45s cubic-bezier(.3,1.5,.5,1) both;transform-box:fill-box;transform-origin:center}
+button,a.b{transition:transform .12s ease,filter .2s ease,background-color .25s ease,color .25s ease,opacity .25s ease,box-shadow .2s ease;-webkit-tap-highlight-color:transparent}
+button:active,a.b:active{transform:scale(.95)}
+@media (hover:hover){button:hover:not(:disabled),a.b:hover{filter:brightness(1.08);box-shadow:0 2px 8px rgba(0,0,0,.15)}}
+input,textarea{transition:border-color .2s ease,box-shadow .2s ease}
+input:focus,textarea:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0 3px var(--ok)}
+.stop{transition:opacity .3s ease}
+.pop{animation:pop .45s cubic-bezier(.3,1.5,.5,1) both;display:inline-block}
+.no{transition:transform .2s ease}.stop:active .no{transform:scale(1.12)}
+#gear{transition:transform .45s cubic-bezier(.3,1.4,.5,1),background-color .25s,filter .2s}
+#gear.on{transform:rotate(90deg)}
+#load{animation:fade .25s ease}
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes pop{0%{transform:scale(.5);opacity:0}65%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-delay:0ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.spin{animation-duration:1.4s!important}}
 </style>
 </head>
 <body>
@@ -163,12 +188,12 @@ path.forEach((p,i)=>{g+='<circle cx="'+X(p)+'" cy="'+Y(p)+'" r="9" fill="var(--p
 return g+'</svg><div class="hint" style="margin:0 0 8px">Denah sebaran titik (tanpa jalan), utara di atas. ■ = titik awal.</div>'}
 const q=x=>x.ok?x.lat+','+x.lng:encodeURIComponent(x.addr||x.name);
 let state={path:[],bad:[],s:null,done:{},dt:{},conf:{}};
-function render(){saveState();
+function render(){saveState();$('out').classList.remove('anim');
 const {path,bad,s}=state;let tot=0,p=s,rows='';
 path.forEach((x,i)=>{const d=p?hav(p,x):0;tot+=d;p=x;x.d=d;x.cum=tot});
 let html='<div class="card"><div class="sum">'+path.length+' tujuan · total ≈ '+tot.toFixed(1)+' km (perkiraan jalan)</div>'+mapSvg(path,s);
 path.forEach((x,i)=>{const k=x.name+i;
-html+='<div class="stop'+(state.done[k]?' done':'')+'"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(x.name)+'</div><div class="ad">'+esc(x.addr)+'</div><div class="dist">+'+x.d.toFixed(1)+' km dari sebelumnya · total '+x.cum.toFixed(1)+' km</div>'+(state.done[k]?'<div class="dist">✔ Selesai pukul '+(state.dt[k]||'')+'</div>':'')
+html+='<div class="stop'+(state.done[k]?' done':'')+'"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(x.name)+'</div><div class="ad">'+esc(x.addr)+'</div><div class="dist">+'+x.d.toFixed(1)+' km dari sebelumnya · total '+x.cum.toFixed(1)+' km</div>'+(state.done[k]?'<div class="dist'+(state.pop===k?' pop':'')+'">✔ Selesai pukul '+(state.dt[k]||'')+'</div>':'')
 +'<div class="row"><a class="b" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+q(x)+'">Navigasi</a><button class="g" data-k="'+esc(k)+'">'+(state.done[k]?'Batal':'✓ Selesai')+'</button></div><div class="row">'+contact(x,k)+'</div></div></div>'});
 html+='</div>';
 if(path.length){html+='<div class="card"><label>Buka seluruh rute di Google Maps</label><div class="hint">Google Maps membatasi 9 titik per rute, jadi dibagi per kelompok.</div><div class="row">';
@@ -179,7 +204,7 @@ html+='</div></div>'}
 if(bad.length)html+='<div class="card"><div class="warn">⚠ '+bad.length+' pasien tanpa lokasi, tidak ikut disusun urutannya (tetap bisa dicari lewat alamat):</div>'+bad.map((x,i)=>'<div class="stop"><div class="no">?</div><div style="flex:1"><div class="nm">'+esc(x.name)+'</div><div class="ad">'+esc(x.addr)+'</div><div class="row"><a class="b g" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination='+q(x)+'">Cari di Maps</a></div><div class="row">'+contact(x,x.name+'b'+i)+'</div></div></div>').join('')+'</div>';
 $('out').innerHTML=html;
 document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{const c=b.dataset.c;state.conf[c]=!state.conf[c];const x=state.path.find((p,i)=>p.name+i===c);if(x)logConf(x,state.conf[c]);render()});
-document.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;state.done[k]=!state.done[k];const x=state.path.find((p,i)=>p.name+i===k);if(x)logDone(k,state.done[k],x);render()})}
+document.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;state.done[k]=!state.done[k];const x=state.path.find((p,i)=>p.name+i===k);if(x)logDone(k,state.done[k],x);state.pop=state.done[k]?k:null;render();state.pop=null;if(state.done[k]&&navigator.vibrate)try{navigator.vibrate(30)}catch(e){}})}
 function esc(t){return String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
 const mode=()=>document.querySelector('input[name=sm]:checked').value;
 function showMode(){const g=mode()==='gps';$('rsbox').style.display=g?'none':'block';$('gpsbox').style.display=g?'block':'none'}
@@ -188,7 +213,7 @@ function save(){try{localStorage.setItem('rao2',JSON.stringify({p:pts,s:$('start
 function run(s){const all=parse(),good=all.filter(x=>x.ok),bad=all.filter(x=>!x.ok);
 if(!good.length){$('out').innerHTML='<div class="card warn">Belum ada pasien yang lokasinya diisi. Tambahkan lokasi dari Google Maps dulu.</div>';return}
 state={path:order(good,s||good[0]),bad,s,done:{},dt:{},conf:{}};
-state.at={d:dkey(new Date()),t:tm(new Date())};render();logRoute(state.path.length,state.path.length?state.path[state.path.length-1].cum:0);$('out').scrollIntoView({behavior:'smooth'})}
+state.at={d:dkey(new Date()),t:tm(new Date())};render();animOut();logRoute(state.path.length,state.path.length?state.path[state.path.length-1].cum:0);$('out').scrollIntoView({behavior:'smooth'})}
 $('go').onclick=()=>{save();
 if(mode()==='rs'){const s=coord($('start').value);if(!s&&!confirm('Lokasi RS belum diisi. Rute akan dimulai dari pasien pertama. Lanjut?'))return;run(s);return}
 if(!navigator.geolocation){alert('GPS tidak tersedia di HP ini. Pilih "Dari RS".');return}
@@ -271,7 +296,7 @@ $('pal').innerHTML=PAL.map((c,i)=>'<button data-c="'+i+'" aria-label="'+c[0]+'" 
 document.querySelectorAll('#pal button').forEach(b=>b.onclick=()=>{SET.color=+b.dataset.c;saveSet();applyTheme()})}
 try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme)}catch(e){}
 document.querySelectorAll('.mb').forEach(b=>b.onclick=()=>{SET.mode=b.dataset.m;saveSet();applyTheme()});
-$('gear').onclick=()=>{const e=$('set');e.style.display=e.style.display==='none'?'block':'none';if(e.style.display==='block'){e.scrollIntoView({behavior:'smooth'});gpsStatus()}};
+$('gear').onclick=()=>{$('gear').classList.toggle('on');const e=$('set');e.style.display=e.style.display==='none'?'block':'none';if(e.style.display==='block'){e.scrollIntoView({behavior:'smooth'});gpsStatus()}};
 /* GPS */
 function gpsStatus(){const el=$('gpsst');if(!navigator.permissions||!navigator.permissions.query){el.textContent='';return}
 navigator.permissions.query({name:'geolocation'}).then(p=>{const t={granted:'diizinkan',denied:'diblokir',prompt:'belum ditanya'}[p.state]||p.state;el.textContent='Izin lokasi di browser saat ini: '+t;p.onchange=gpsStatus},()=>{el.textContent=''})}
@@ -306,8 +331,13 @@ function saveDraft(){try{localStorage.setItem('rao-draft',JSON.stringify(DR.map(
 DR.forEach(i=>$(i).addEventListener('input',saveDraft));
 try{const d=JSON.parse(localStorage.getItem('rao-draft')||'null');if(d)DR.forEach((i,j)=>{$(i).value=d[j]||''})}catch(e){}
 try{const r=JSON.parse(localStorage.getItem('rao-route')||'null');
-if(r&&r.path&&r.path.length){state=r;state.bad=state.bad||[];state.done=state.done||{};state.dt=state.dt||{};state.conf=state.conf||{};render();
+if(r&&r.path&&r.path.length){state=r;state.pop=null;state.bad=state.bad||[];state.done=state.done||{};state.dt=state.dt||{};state.conf=state.conf||{};render();animOut();
 $('out').insertAdjacentHTML('afterbegin','<div class="hint" style="margin-bottom:6px">💾 Rute tersimpan'+(state.at?' (disusun '+fmtTgl(state.at.d)+', pukul '+state.at.t+')':'')+'. Jika Anda menambah atau menghapus pasien, tekan Susun Rute Terdekat lagi.</div>')}}catch(e){}
+
+function animOut(){const o=$('out');o.classList.add('anim');
+o.querySelectorAll('.stop').forEach((e,i)=>{e.style.animationDelay=Math.min(i,14)*40+'ms'});
+o.querySelectorAll('svg circle').forEach((e,i)=>{e.style.animationDelay=(120+i*25)+'ms'});
+setTimeout(()=>o.classList.remove('anim'),1800)}
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
