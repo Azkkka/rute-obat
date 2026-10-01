@@ -7,8 +7,8 @@
 <meta name="author" content="Azkkka">
 <meta name="theme-color" content="#0f8a76">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" href="icons/favicon-64.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Rute Obat">
 <style>
@@ -68,11 +68,26 @@ input:focus,textarea:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0
 @keyframes pop{0%{transform:scale(.5);opacity:0}65%{transform:scale(1.12);opacity:1}100%{transform:scale(1);opacity:1}}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-delay:0ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}.spin{animation-duration:1.4s!important}}
+select{width:100%;border:1px solid var(--bd);border-radius:10px;padding:10px;background:var(--bg);color:var(--tx);font:inherit;margin-top:6px}
+.kur{position:relative;width:250px;height:64px}
+.kur .ap,.kur .bp{position:absolute;top:20px;font-size:26px}.kur .ap{left:0}.kur .bp{right:0}
+.kur .ln{position:absolute;left:36px;right:36px;top:44px;border-top:3px dashed var(--pri);opacity:.55}
+.kur .pl{position:absolute;left:36px;top:14px;font-size:24px;animation:hop 1.8s ease-in-out infinite}
+@keyframes hop{0%{transform:translate(0,0);opacity:0}10%{opacity:1}25%{transform:translate(40px,-12px)}50%{transform:translate(80px,0)}75%{transform:translate(120px,-12px);opacity:1}100%{transform:translate(160px,0);opacity:0}}
+.pls{width:58px;height:58px;border-radius:16px;background:var(--pri);position:relative;animation:beat 1.2s ease-in-out infinite}
+.pls::before,.pls::after{content:"";position:absolute;background:var(--pri-tx);border-radius:3px;left:50%;top:50%;transform:translate(-50%,-50%)}
+.pls::before{width:30px;height:8px}.pls::after{width:8px;height:30px}
+@keyframes beat{0%,100%{transform:scale(1);box-shadow:0 0 0 0 var(--ok)}50%{transform:scale(1.1);box-shadow:0 0 0 16px transparent}}
+.dts{display:flex;gap:9px}.dts i{width:14px;height:14px;border-radius:50%;background:var(--pri);animation:bn 1s ease-in-out infinite}
+.dts i:nth-child(2){animation-delay:.15s}.dts i:nth-child(3){animation-delay:.3s}
+@keyframes bn{0%,80%,100%{transform:translateY(0) scale(.7);opacity:.5}40%{transform:translateY(-12px) scale(1);opacity:1}}
+@keyframes ind{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}
+@media (prefers-reduced-motion:reduce){.dts i,.pls,.kur .pl,#lbar{animation-duration:1.4s!important}}
 </style>
 </head>
 <body>
 <main>
-<div style="display:flex;justify-content:space-between;align-items:center"><h1 style="margin:4px 0 2px">💊 Rute Antar Obat</h1><button class="g" id="gear" aria-label="Pengaturan" style="padding:8px 12px;font-size:18px">⚙️</button></div>
+<div style="display:flex;justify-content:space-between;align-items:center"><h1 style="margin:4px 0 2px;display:flex;align-items:center;gap:9px"><img src="data:image/png;base64,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" alt="" width="34" height="34" style="border-radius:9px;flex:none"> Rute Antar Obat</h1><button class="g" id="gear" aria-label="Pengaturan" style="padding:8px 12px;font-size:18px">⚙️</button></div>
 <p class="s">Masukkan data pasien (sampai 30), lalu aplikasi menyusun urutan antar yang paling dekat.</p>
 
 <div class="card" id="set" style="display:none">
@@ -85,12 +100,26 @@ input:focus,textarea:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0
 <label style="font-weight:500;display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="gpson" style="width:auto"> Izinkan aplikasi membaca lokasi saya</label>
 <div class="hint" id="gpsst"></div>
 <div class="hint">Jika dimatikan, aplikasi berhenti memakai GPS dan hanya bisa mulai dari RS. Halaman web tidak bisa mematikan layanan lokasi HP atau mencabut izin browser. Untuk mencabutnya: ketuk ikon gembok di kolom alamat browser &gt; Izin &gt; Lokasi &gt; Blokir, atau matikan Lokasi di pengaturan HP.</div>
-<div class="hint" style="margin-top:12px"><b>Loading screen sendiri</b></div>
-<input type="file" id="lfile" accept="image/*" style="margin-top:6px">
-<div id="lprev" style="margin:8px 0"></div>
-<label style="font-weight:500;display:flex;gap:8px;align-items:center"><input type="checkbox" id="spl" style="width:auto"> Tampilkan saat aplikasi dibuka</label>
-<div class="row"><button class="g" id="ltest">Lihat loading screen</button><button class="g" id="ldel">Hapus gambar</button></div>
-<div class="hint">Format GIF, PNG, JPG, WebP, atau SVG (boleh beranimasi), maksimal 1,5 MB. Loading screen tampil saat aplikasi dibuka dan saat membaca lokasi GPS. Format Lottie (.json) belum didukung.</div>
+<div class="hint" style="margin-top:12px"><b>Loading screen</b></div>
+<select id="lstyle">
+<option value="spin">Bawaan: putaran</option>
+<option value="kurir">Bawaan: pil berjalan dari RS ke rumah</option>
+<option value="denyut">Bawaan: denyut tanda plus</option>
+<option value="titik">Bawaan: titik melompat</option>
+<option value="media">File saya sendiri (gambar, GIF, video, Lottie)</option>
+</select>
+<div id="lmedia" style="display:none;margin-top:8px">
+<input type="file" id="lfile" accept="image/*,video/mp4,video/webm,.json,application/json">
+<div class="hint" id="lmeta"></div>
+<div class="row"><button class="g" id="ldel">Hapus file saya</button></div>
+</div>
+<input id="ltext" placeholder="Judul, contoh: Rute Antar Obat" style="margin-top:8px">
+<label style="font-weight:500;margin-top:8px">Lama tampil saat aplikasi dibuka</label>
+<select id="ldur" style="margin-top:0"><option value="1">1 detik</option><option value="2">2 detik</option><option value="3">3 detik</option><option value="5">5 detik</option></select>
+<label style="font-weight:500;display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="lbaron" style="width:auto"> Tampilkan garis kemajuan</label>
+<label style="font-weight:500;display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="spl" style="width:auto"> Tampilkan saat aplikasi dibuka</label>
+<div class="row"><button class="g" id="ltest">Lihat loading screen</button></div>
+<div class="hint">File sendiri: gambar atau GIF (maks. 1,5 MB), video MP4/WebM pendek (maks. 15 MB, diputar berulang tanpa suara), atau animasi Lottie .json (maks. 1 MB, butuh internet saat dibuka). Loading screen tampil saat aplikasi dibuka dan saat membaca lokasi GPS. Ketuk layar untuk menutupnya.</div>
 <div class="row"><button class="g" id="sreset">Kembalikan pengaturan awal</button></div>
 </div>
 
@@ -146,7 +175,7 @@ input:focus,textarea:focus{outline:none;border-color:var(--pri);box-shadow:0 0 0
 </div>
 <p class="hint" style="text-align:center;margin:18px 0 6px">Aplikasi dibuat oleh <b>Azkkka</b></p>
 </main>
-<div id="load" style="display:none;position:fixed;inset:0;z-index:50;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;text-align:center"><div id="lbox"></div><div id="ltxt" style="color:var(--mut);font-weight:600"></div></div>
+<div id="load" style="display:none;position:fixed;inset:0;z-index:50;background:var(--bg);flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;text-align:center"><div id="lbox"></div><div id="ltit" style="font-size:20px;font-weight:700"></div><div id="ltxt" style="color:var(--mut);font-weight:600"></div><div id="lbarw" style="display:none;width:min(260px,70vw);height:6px;border-radius:99px;background:var(--bd);overflow:hidden"><div id="lbar" style="height:100%;width:0;background:var(--pri);border-radius:99px"></div></div></div>
 <script>
 const $=id=>document.getElementById(id);
 const R=6371,ROAD=1.3;
@@ -306,22 +335,63 @@ if(!on)document.querySelector('input[name=sm][value=rs]').checked=true;
 $('gps').disabled=!on;$('gps').style.opacity=on?1:.5;showMode()}
 $('gpson').onchange=()=>{SET.gps=$('gpson').checked;saveSet();applyGps();save()};
 /* Loading screen */
-let LT;const loadImg=()=>{try{return localStorage.getItem('rao-load')||''}catch(e){return ''}};
-function drawLoad(){const g=loadImg(),h=g?'<img src="'+g+'" alt="" style="max-width:70vw;max-height:45vh;object-fit:contain">':'<div class="spin"></div>';
-$('lbox').innerHTML=h;$('lprev').innerHTML=g?'<img src="'+g+'" alt="" style="max-width:140px;max-height:100px;object-fit:contain;border:1px solid var(--bd);border-radius:8px;padding:4px">':'<div class="hint">Belum ada gambar. Memakai animasi bawaan.</div>'}
-function showLoad(m,ms){clearTimeout(LT);drawLoad();$('ltxt').textContent=m||'';$('load').style.display='flex';if(ms)LT=setTimeout(hideLoad,ms)}
-function hideLoad(){clearTimeout(LT);$('load').style.display='none'}
+let LT,LVID='',LANIM=null;
+const loadImg=()=>{try{return localStorage.getItem('rao-load')||''}catch(e){return ''}};
+const loadLot=()=>{try{return localStorage.getItem('rao-lottie')||''}catch(e){return ''}};
+const lstyle=()=>SET.ls||(loadImg()?'media':'spin');
+function idb(){return new Promise((ok,no)=>{try{const q=indexedDB.open('rao-media',1);q.onupgradeneeded=()=>q.result.createObjectStore('kv');q.onsuccess=()=>ok(q.result);q.onerror=()=>no(q.error)}catch(e){no(e)}})}
+const idbGet=k=>idb().then(d=>new Promise((ok,no)=>{const r=d.transaction('kv').objectStore('kv').get(k);r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)}));
+const idbPut=(k,v)=>idb().then(d=>new Promise((ok,no)=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=()=>ok();t.onerror=()=>no(t.error)}));
+const idbDel=k=>idb().then(d=>new Promise(ok=>{const t=d.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=()=>ok();t.onerror=()=>ok()})).catch(()=>{});
+function loadVid(){return idbGet('video').then(b=>{if(LVID)URL.revokeObjectURL(LVID);LVID=b?URL.createObjectURL(b):''}).catch(()=>{LVID=''})}
+function needLottie(cb){if(window.lottie)return cb(true);const sc=document.createElement('script');sc.src='https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js';sc.onload=()=>cb(!!window.lottie);sc.onerror=()=>cb(false);document.head.appendChild(sc)}
+const BI={spin:'<div class="spin"></div>',kurir:'<div class="kur"><span class="ap">🏥</span><div class="ln"></div><span class="bp">🏠</span><span class="pl">💊</span></div>',denyut:'<div class="pls"></div>',titik:'<div class="dts"><i></i><i></i><i></i></div>'};
+function drawLoad(){const st=lstyle(),mk=SET.mk||'img';let h=BI.spin;
+if(st==='media'){const g=loadImg();
+if(mk==='video'&&LVID)h='<video src="'+LVID+'" autoplay loop muted playsinline style="max-width:80vw;max-height:45vh;border-radius:12px"></video>';
+else if(mk==='lottie'&&loadLot())h='<div id="lot" style="width:min(240px,60vw);height:min(240px,60vw)"></div>';
+else if(mk==='img'&&g)h='<img src="'+g+'" alt="" style="max-width:70vw;max-height:45vh;object-fit:contain">'}
+else h=BI[st]||BI.spin;
+$('lbox').innerHTML=h;
+const v=$('lbox').querySelector('video');if(v){v.muted=true;if(v.play)v.play().catch(()=>{})}
+if(st==='media'&&mk==='lottie'&&loadLot())needLottie(ok=>{const el=$('lot');if(!el)return;if(!ok){$('lbox').innerHTML=BI.spin;return}
+try{if(LANIM)LANIM.destroy();LANIM=lottie.loadAnimation({container:el,renderer:'svg',loop:true,autoplay:true,animationData:JSON.parse(loadLot())})}catch(e){$('lbox').innerHTML=BI.spin}})}
+function showLoad(m,ms){clearTimeout(LT);const t=SET.ltext!==undefined?SET.ltext:'Rute Antar Obat';
+$('ltit').textContent=t;$('ltit').style.display=t?'block':'none';$('ltxt').textContent=m||'';
+$('load').style.display='flex';drawLoad();
+const bw=$('lbarw'),b=$('lbar');bw.style.display=SET.lbar===false?'none':'block';
+b.style.transition='none';b.style.animation='none';b.style.transform='none';b.style.width='0';void b.offsetWidth;
+if(ms){b.style.transition='width '+ms+'ms linear';b.style.width='100%'}else{b.style.width='40%';b.style.animation='ind 1.2s ease-in-out infinite'}
+if(ms)LT=setTimeout(hideLoad,ms)}
+function hideLoad(){clearTimeout(LT);$('load').style.display='none';if(LANIM){try{LANIM.destroy()}catch(e){}LANIM=null}$('lbox').innerHTML=''}
 $('load').onclick=hideLoad;
-$('lfile').onchange=e=>{const f=e.target.files[0];if(!f)return;
-if(!/^image\//.test(f.type)){alert('Pilih file gambar (GIF, PNG, JPG, WebP, SVG).');return}
-if(f.size>1.5*1024*1024){alert('File terlalu besar, maksimal 1,5 MB.');return}
-const r=new FileReader();r.onload=()=>{try{localStorage.setItem('rao-load',r.result);drawLoad();showLoad('Pratinjau loading screen',1800)}catch(x){alert('Gagal menyimpan. Penyimpanan penuh atau tidak tersedia.')}};r.readAsDataURL(f);e.target.value=''};
-$('ldel').onclick=()=>{try{localStorage.removeItem('rao-load')}catch(e){}drawLoad()};
-$('ltest').onclick=()=>showLoad('Contoh loading screen',2000);
-$('spl').checked=SET.splash!==false;$('spl').onchange=()=>{SET.splash=$('spl').checked;saveSet()};
-$('sreset').onclick=()=>{if(!confirm('Kembalikan tema, GPS, dan layar pembuka ke awal? (Gambar loading tidak dihapus)'))return;SET={};saveSet();$('spl').checked=true;applyTheme();applyGps();save()};
-applyTheme();applyGps();drawLoad();
-if(loadImg()&&SET.splash!==false)showLoad('Rute Antar Obat',1600);
+function syncLoadUI(){const st=lstyle(),mk=SET.mk||'img';$('lstyle').value=st;$('lmedia').style.display=st==='media'?'block':'none';
+$('ltext').value=SET.ltext!==undefined?SET.ltext:'Rute Antar Obat';$('ldur').value=String(SET.ldur||2);
+$('lbaron').checked=SET.lbar!==false;$('spl').checked=SET.splash===true||(SET.splash===undefined&&!!loadImg());
+const has=(mk==='video'&&LVID)||(mk==='lottie'&&loadLot())||(mk==='img'&&loadImg());
+$('lmeta').textContent=has?'File tersimpan: '+({video:'video',lottie:'animasi Lottie',img:'gambar/GIF'}[mk]):'Belum ada file tersimpan. Pilih file di atas.'}
+$('lstyle').onchange=()=>{SET.ls=$('lstyle').value;saveSet();syncLoadUI();showLoad('Pratinjau',1800)};
+$('ltext').oninput=()=>{SET.ltext=$('ltext').value;saveSet()};
+$('ldur').onchange=()=>{SET.ldur=+$('ldur').value;saveSet()};
+$('lbaron').onchange=()=>{SET.lbar=$('lbaron').checked;saveSet()};
+$('spl').onchange=()=>{SET.splash=$('spl').checked;saveSet()};
+$('ltest').onclick=()=>showLoad('Contoh loading screen',2500);
+$('ldel').onclick=()=>{try{localStorage.removeItem('rao-load');localStorage.removeItem('rao-lottie')}catch(e){}idbDel('video').then(()=>{LVID='';SET.ls='spin';delete SET.mk;saveSet();syncLoadUI()})};
+$('lfile').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;
+const isV=/^video\//.test(f.type),isI=/^image\//.test(f.type),isJ=/json/.test(f.type)||/\.json$/i.test(f.name);
+try{
+if(isV){if(f.size>15*1024*1024){alert('Video terlalu besar, maksimal 15 MB. Pakai video pendek beberapa detik.');return}await idbPut('video',f);await loadVid();SET.mk='video'}
+else if(isI){if(f.size>1.5*1024*1024){alert('Gambar terlalu besar, maksimal 1,5 MB.');return}
+const d=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(f)});localStorage.setItem('rao-load',d);SET.mk='img'}
+else if(isJ){if(f.size>1024*1024){alert('File Lottie terlalu besar, maksimal 1 MB.');return}
+const t=await f.text();try{const j=JSON.parse(t);if(!j.layers)throw 0}catch(x){alert('File JSON ini bukan animasi Lottie yang valid.');return}
+localStorage.setItem('rao-lottie',t);SET.mk='lottie'}
+else{alert('Format tidak didukung. Pakai gambar/GIF, video MP4/WebM, atau Lottie (.json).');return}
+SET.ls='media';SET.splash=true;saveSet();syncLoadUI();showLoad('Pratinjau',2500)
+}catch(x){alert('Gagal menyimpan file. Penyimpanan penuh atau tidak tersedia.')}};
+$('sreset').onclick=()=>{if(!confirm('Kembalikan tema, GPS, dan layar pembuka ke awal? (Gambar loading tidak dihapus)'))return;SET={};saveSet();syncLoadUI();applyTheme();applyGps();save()};
+applyTheme();applyGps();syncLoadUI();
+loadVid().then(()=>{syncLoadUI();if(SET.splash===true||(SET.splash===undefined&&loadImg()))showLoad('Memuat...',(SET.ldur||2)*1000)});
 
 /* ===== Simpan rute & draft agar tidak hilang saat ditutup/refresh ===== */
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
