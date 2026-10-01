@@ -19,3 +19,5 @@ CARA PASANG APLIKASI RUTE ANTAR OBAT
    - Alamat harus HTTPS (Netlify dan GitHub Pages sudah otomatis).
    - Setelah memperbarui file, ubah angka versi di sw.js (rute-obat-v1 menjadi v2) supaya HP mengambil versi terbaru.
    - Data pasien hanya tersimpan di HP masing-masing. Hapus setelah pengantaran selesai.
+
+5. Semua file ada di satu folder (tanpa sub-folder), jadi cukup pilih semua file lalu seret ke GitHub atau Netlify sekaligus.
