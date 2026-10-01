@@ -42,6 +42,7 @@ button.g,a.g{background:transparent;color:var(--pri);border:1px solid var(--pri)
 .mb.on,button.g.on{background:var(--pri);color:var(--pri-tx)}
 .spin{width:54px;height:54px;border:5px solid var(--bd);border-top-color:var(--pri);border-radius:50%;animation:sp .9s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+html,body{overscroll-behavior-y:contain}
 </style>
 </head>
 <body>
@@ -162,7 +163,7 @@ path.forEach((p,i)=>{g+='<circle cx="'+X(p)+'" cy="'+Y(p)+'" r="9" fill="var(--p
 return g+'</svg><div class="hint" style="margin:0 0 8px">Denah sebaran titik (tanpa jalan), utara di atas. ■ = titik awal.</div>'}
 const q=x=>x.ok?x.lat+','+x.lng:encodeURIComponent(x.addr||x.name);
 let state={path:[],bad:[],s:null,done:{},dt:{},conf:{}};
-function render(){
+function render(){saveState();
 const {path,bad,s}=state;let tot=0,p=s,rows='';
 path.forEach((x,i)=>{const d=p?hav(p,x):0;tot+=d;p=x;x.d=d;x.cum=tot});
 let html='<div class="card"><div class="sum">'+path.length+' tujuan · total ≈ '+tot.toFixed(1)+' km (perkiraan jalan)</div>'+mapSvg(path,s);
@@ -187,7 +188,7 @@ function save(){try{localStorage.setItem('rao2',JSON.stringify({p:pts,s:$('start
 function run(s){const all=parse(),good=all.filter(x=>x.ok),bad=all.filter(x=>!x.ok);
 if(!good.length){$('out').innerHTML='<div class="card warn">Belum ada pasien yang lokasinya diisi. Tambahkan lokasi dari Google Maps dulu.</div>';return}
 state={path:order(good,s||good[0]),bad,s,done:{},dt:{},conf:{}};
-render();logRoute(state.path.length,state.path.length?state.path[state.path.length-1].cum:0);$('out').scrollIntoView({behavior:'smooth'})}
+state.at={d:dkey(new Date()),t:tm(new Date())};render();logRoute(state.path.length,state.path.length?state.path[state.path.length-1].cum:0);$('out').scrollIntoView({behavior:'smooth'})}
 $('go').onclick=()=>{save();
 if(mode()==='rs'){const s=coord($('start').value);if(!s&&!confirm('Lokasi RS belum diisi. Rute akan dimulai dari pasien pertama. Lanjut?'))return;run(s);return}
 if(!navigator.geolocation){alert('GPS tidak tersedia di HP ini. Pilih "Dari RS".');return}
@@ -200,12 +201,12 @@ $('add').onclick=()=>{const n=$('fn').value.trim();if(!n){alert('Isi nama pasien
 if(pts.length>=30){alert('Maksimal 30 pasien.');return}
 const l=$('fl').value.trim(),c=coord(l);if(l&&!c&&!confirm('Lokasi tidak terbaca. Tetap tambahkan tanpa lokasi?'))return;
 pts.push({name:n,addr:$('fa').value.trim(),phone:ph($('fp').value),lat:c&&c.lat,lng:c&&c.lng,ok:!!c});
-['fn','fa','fp','fl'].forEach(i=>$(i).value='');save();drawList();$('fn').focus()};
+['fn','fa','fp','fl'].forEach(i=>$(i).value='');saveDraft();save();drawList();$('fn').focus()};
 $('imp').onclick=()=>{parseLines().forEach(x=>{if(pts.length<30)pts.push(x)});$('list').value='';save();drawList()};
 $('ex').onclick=()=>{const L=[['Bu Sari','Jl. Kaliurang Km 5, Caturtunggal',-7.7630,110.3860],['Pak Budi','Jl. Affandi, Gejayan',-7.7700,110.3900],['Bu Ani','Jl. Seturan Raya',-7.7745,110.4070],['Pak Joko','Jl. Babarsari',-7.7790,110.4145],['Bu Rina','Jl. Ring Road Utara, Condongcatur',-7.7540,110.3980],['Pak Agus','Jl. Anggajaya, Condongcatur',-7.7570,110.4010],['Bu Dewi','Jl. Palagan Km 7, Sinduadi',-7.7420,110.3620],['Pak Hadi','Jl. Monjali, Sinduadi',-7.7500,110.3690],['Bu Wati','Jl. Godean Km 4',-7.7710,110.3400],['Pak Eko','Jl. Godean Km 8, Sidoarum',-7.7760,110.3200],['Bu Yani','Jl. Magelang Km 8, Mlati',-7.7380,110.3550],['Pak Tono','Jl. Magelang Km 12',-7.7200,110.3530],['Bu Lilis','Jl. Wates Km 5, Gamping',-7.8050,110.3300],['Pak Rudi','Jl. Gamping',-7.8040,110.3250],['Bu Tuti','Jl. Solo Km 10, Kalasan',-7.7700,110.4600],['Pak Yanto','Jl. Prambanan',-7.7520,110.4910],['Bu Nur','Jl. Kaliurang Km 10, Ngaglik',-7.7180,110.4030],['Pak Bayu','Jl. Kaliurang Km 14, Pakem',-7.6800,110.4130],['Bu Mega','Jl. Pakem-Turi',-7.6560,110.3900],['Pak Dimas','Jl. Turi',-7.6510,110.3600],['Bu Fitri','Jl. Tempel',-7.6640,110.3170],['Pak Rahmat','Jl. Seyegan',-7.7230,110.3000],['Bu Indah','Jl. Moyudan',-7.7830,110.2600],['Pak Slamet','Jl. Minggir',-7.7200,110.2570],['Bu Endang','Jl. Cangkringan',-7.6580,110.4400],['Pak Wahyu','Jl. Ngemplak',-7.7000,110.4380],['Bu Retno','Jl. Berbah',-7.8010,110.4500],['Pak Anto','Jl. Ring Road Timur, Maguwoharjo',-7.7830,110.4300],['Bu Sinta','Jl. Depok Raya',-7.7620,110.4230],['Pak Dedi','Jl. Colombo, Caturtunggal',-7.7770,110.3870]];
 pts=L.map((a,i)=>({name:a[0],addr:a[1]+', Sleman',lat:a[2],lng:a[3],ok:true,phone:ph('0812340'+(1001+i))}));
 if(!$('start').value)$('start').value='-7.7686,110.3733';save();drawList()};
-$('clr').onclick=()=>{if(pts.length&&!confirm('Hapus semua data pasien?'))return;pts=[];$('out').innerHTML='';save();drawList()};
+$('clr').onclick=()=>{if(pts.length&&!confirm('Hapus semua data pasien?'))return;pts=[];$('out').innerHTML='';state={path:[],bad:[],s:null,done:{},dt:{},conf:{}};try{localStorage.removeItem('rao-route')}catch(e){}save();drawList()};
 try{const d=JSON.parse(localStorage.getItem('rao2')||'null');if(d){pts=d.p||[];$('start').value=d.s||'';$('tpl').value=d.t||DEF;if(d.m==='gps')document.querySelector('input[name=sm][value=gps]').checked=true}}catch(e){}
 showMode();
 drawList();
@@ -296,6 +297,17 @@ $('spl').checked=SET.splash!==false;$('spl').onchange=()=>{SET.splash=$('spl').c
 $('sreset').onclick=()=>{if(!confirm('Kembalikan tema, GPS, dan layar pembuka ke awal? (Gambar loading tidak dihapus)'))return;SET={};saveSet();$('spl').checked=true;applyTheme();applyGps();save()};
 applyTheme();applyGps();drawLoad();
 if(loadImg()&&SET.splash!==false)showLoad('Rute Antar Obat',1600);
+
+/* ===== Simpan rute & draft agar tidak hilang saat ditutup/refresh ===== */
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+function saveState(){try{if(state&&state.path&&state.path.length)localStorage.setItem('rao-route',JSON.stringify(state));else localStorage.removeItem('rao-route')}catch(e){}}
+const DR=['fn','fa','fp','fl'];
+function saveDraft(){try{localStorage.setItem('rao-draft',JSON.stringify(DR.map(i=>$(i).value)))}catch(e){}}
+DR.forEach(i=>$(i).addEventListener('input',saveDraft));
+try{const d=JSON.parse(localStorage.getItem('rao-draft')||'null');if(d)DR.forEach((i,j)=>{$(i).value=d[j]||''})}catch(e){}
+try{const r=JSON.parse(localStorage.getItem('rao-route')||'null');
+if(r&&r.path&&r.path.length){state=r;state.bad=state.bad||[];state.done=state.done||{};state.dt=state.dt||{};state.conf=state.conf||{};render();
+$('out').insertAdjacentHTML('afterbegin','<div class="hint" style="margin-bottom:6px">💾 Rute tersimpan'+(state.at?' (disusun '+fmtTgl(state.at.d)+', pukul '+state.at.t+')':'')+'. Jika Anda menambah atau menghapus pasien, tekan Susun Rute Terdekat lagi.</div>')}}catch(e){}
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
