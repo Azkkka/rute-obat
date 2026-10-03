@@ -1,4 +1,4 @@
-const V='rute-obat-v13';
+const V='rute-obat-v15';
 const FILES=['./','index.html','manifest.webmanifest','app-192.png','app-512.png','app-maskable-192.png','app-maskable-512.png','app-apple-180.png','app-fav-64.png'];
 // Simpan satu per satu: jika ada file yang belum ada di server, pemasangan tetap berjalan.
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>Promise.all(FILES.map(f=>c.add(f).catch(()=>{})))));self.skipWaiting()});
