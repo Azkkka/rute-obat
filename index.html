@@ -288,6 +288,14 @@ button:active,a.b:active{transform:scale(.97)}
 #bkd summary{list-style:none}#bkd summary::-webkit-details-marker{display:none}
 #bkd summary::after{content:"▾";float:right;opacity:.6;transition:transform .2s}#bkd[open] summary::after{transform:rotate(180deg)}
 #bkl{max-height:340px;overflow:auto}
+.icbig{font-size:34px;font-weight:800;text-align:center;letter-spacing:-.02em;color:var(--pri);margin-top:10px}
+.ichead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.ichead button{padding:8px 14px}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--bd);font-size:14px}.kv b{text-align:right}
+.hb2{height:8px;border-radius:99px;background:var(--bd);overflow:hidden;margin:12px 0 4px}.hb2 i{display:block;height:100%;background:linear-gradient(90deg,var(--pri),var(--pri2));border-radius:99px}
+.ir{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--bd);border-radius:12px;margin-top:6px}.ir.off{opacity:.6}.ir input{width:76px;padding:8px;text-align:center}
+#incd summary{cursor:pointer;font-weight:700;list-style:none}#incd summary::-webkit-details-marker{display:none}
+.icw{background:var(--ok);border-radius:12px;padding:9px 12px;font-size:13px;margin-top:10px}
 </style>
 </head>
 <body>
@@ -419,6 +427,25 @@ button:active,a.b:active{transform:scale(.97)}
 <div class="hint">Rekap mencatat pasien yang Anda tandai ✓ Selesai, lengkap dengan jam sampai detik. Tersimpan di HP dan tidak ikut terhapus saat "Hapus semua" pasien.</div>
 <div id="rhist" style="margin-top:8px"></div>
 </div>
+<div class="card" id="inc">
+<label>💰 Perkiraan pendapatan</label>
+<div id="incsum"></div>
+<details id="incd" style="margin-top:10px"><summary>📅 Rincian per hari dan pengaturan gaji</summary>
+<div class="hint" style="margin-top:8px">Jumlah alamat per hari diambil dari rekap. Isi kotak di kanan untuk mengganti, misalnya hari sebelum Anda memakai aplikasi ini. Kosongkan untuk kembali ke angka rekap.</div>
+<div id="incdays"></div>
+<div class="hint" style="margin-top:14px"><b>Pengaturan gaji</b></div>
+<label style="font-weight:500;margin-top:8px">Tarif per alamat (Rp)</label><input type="number" id="inrate" inputmode="numeric" min="0">
+<label style="font-weight:500;margin-top:8px">Periode gaji terakhir: mulai</label><input type="date" id="inps">
+<label style="font-weight:500;margin-top:8px">Periode gaji terakhir: sampai</label><input type="date" id="inpe">
+<label style="font-weight:500;margin-top:8px">Siklus gaji (hari)</label><input type="number" id="incyc" inputmode="numeric" min="1">
+<label style="font-weight:500;margin-top:8px">Tanggal gaji pertama cair</label><input type="date" id="inp1">
+<label style="font-weight:500;display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="inosat" style="width:auto"> Sabtu libur</label>
+<label style="font-weight:500;display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="inosun" style="width:auto"> Minggu libur</label>
+<div class="row"><button class="g" id="inrst">Kembalikan pengaturan awal</button></div>
+</details>
+<div class="hint">Ini hanya perkiraan dari data di aplikasi, bukan slip gaji. Jumlah resmi tetap mengikuti perhitungan tempat Anda bekerja.</div>
+</div>
+
 <p class="hint" style="text-align:center;margin:18px 0 6px">Aplikasi dibuat oleh <b>Azkkka</b></p>
 </main>
 <div id="toast"></div>
@@ -556,14 +583,14 @@ let h='<div class="sum">'+fmtTgl(r.k)+'</div><div style="font-size:14px;margin-b
 if(sel.length)h+='<div class="ad">Pengantaran pertama '+sel[0].t+' · terakhir '+sel[sel.length-1].t+'</div>';
 D.rute.forEach(x=>{h+='<div class="ad">Rute disusun pukul '+x.t+' ('+x.n+' pasien, ≈ '+x.km+' km)</div>'});
 h+=sel.map((e,i)=>'<div class="stop"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(e.name)+'</div><div class="ad">📍 '+esc(e.addr||'(alamat tidak tercatat)')+'</div>'+(rp(e)?'<div class="ad">📞 '+esc(lp(rp(e)))+'</div>':'')+(rc(e)?'<div class="ad">🧭 '+fc(rc(e))+' · <a href="'+mapsUrl(rc(e))+'" target="_blank" rel="noopener" style="color:var(--pri)">Buka di Maps</a></div>':'')+'<div class="dist">Selesai pukul '+e.t+(e.c?' · alamat terkonfirmasi':'')+'</div><div class="row" style="margin-top:6px"><button class="g" data-ra="'+i+'" style="padding:7px 12px;font-size:13px">➕ Antar lagi</button></div></div></div>').join('')||'<div class="hint">Belum ada pengantaran tercatat pada tanggal ini.</div>';
-$('rsum').innerHTML=h;window.RSEL=sel;document.querySelectorAll('[data-ra]').forEach(b=>{b.onclick=()=>addFromEntry(window.RSEL[+b.dataset.ra])});
+$('rsum').innerHTML=h;try{drawInc()}catch(e){}window.RSEL=sel;document.querySelectorAll('[data-ra]').forEach(b=>{b.onclick=()=>addFromEntry(window.RSEL[+b.dataset.ra])});
 const ks=Object.keys(LOG).filter(k=>LOG[k].sel.length||LOG[k].rute.length).sort().reverse().slice(0,30);
 $('rhist').innerHTML=ks.length?'<div class="hint">Riwayat tanggal (tekan untuk membuka):</div><div class="row">'+ks.map(k=>'<button class="g" data-d="'+k+'">'+k.slice(8)+'/'+k.slice(5,7)+' ('+LOG[k].sel.length+')</button>').join('')+'</div>':'';
 document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{$('rd').value=b.dataset.d;drawRekap()})}
 function rekapText(){const r=rekapData(),D=r.D,sel=r.sel,lr=D.rute[D.rute.length-1];
 let t='REKAP ANTAR OBAT\n'+fmtTgl(r.k)+'\n';
 if(lr)t+='Rute disusun pukul '+lr.t+' ('+lr.n+' pasien, sekitar '+lr.km+' km)\n';
-t+='Sudah diantar: '+sel.length+(lr?' dari '+lr.n:'')+'\nAlamat terkonfirmasi: '+sel.filter(e=>e.c).length+'\n';
+t+='Sudah diantar: '+sel.length+(lr?' dari '+lr.n:'')+'\nAlamat terkonfirmasi: '+sel.filter(e=>e.c).length+'\n';t+='Perkiraan pendapatan hari itu: '+icRp(sel.length*((INC&&INC.rate)||5000))+' ('+sel.length+' alamat)\n';
 if(sel.length)t+='Pertama '+sel[0].t+', terakhir '+sel[sel.length-1].t+'\n';
 return t+'\n'+sel.map((e,i)=>(i+1)+'. '+e.name+'\n   Selesai pukul '+e.t+(e.addr?'\n   Alamat: '+e.addr:'')+(rp(e)?'\n   Telp: '+lp(rp(e)):'')+(rc(e)?'\n   Koordinat: '+fc(rc(e))+'\n   Peta: '+mapsUrl(rc(e)):'')+(e.c?'\n   [alamat terkonfirmasi]':'')).join('\n\n')}
 $('rd').value=dkey(new Date());$('rd').onchange=drawRekap;
@@ -935,6 +962,60 @@ b.n=(b.n||0)+1;if(d>(b.t||''))b.t=d}));
 pts.forEach(p=>{if(!BOOK.some(q=>bkey(q)===bkey(p)))BOOK.push({name:p.name,addr:p.addr||'',phone:p.phone||'',lat:p.ok?p.lat:null,lng:p.ok?p.lng:null,ok:!!p.ok,n:0,t:dkey(new Date())})});
 saveBook();try{localStorage.setItem('rao-book-seed','1')}catch(e){}}
 seedBook();drawBook();drawRekap();
+
+/* ===== Perkiraan pendapatan ===== */
+var INC=null,INCPER=null,INC_DEF={rate:5000,ps:'2026-09-23',pe:'2026-10-03',cyc:14,pay1:'2026-08-14',off:[0,6],man:{}};
+function incLoad(){let c=null;try{c=JSON.parse(localStorage.getItem('rao-inc')||'null')}catch(e){}INC=Object.assign({},INC_DEF,c||{});if(!Array.isArray(INC.off))INC.off=[0,6];if(!INC.man)INC.man={};INC.cyc=Math.max(1,+INC.cyc||14)}
+function incSave(){try{localStorage.setItem('rao-inc',JSON.stringify(INC))}catch(e){}}
+function icP(s){const a=s.split('-').map(Number);return new Date(a[0],a[1]-1,a[2],12)}
+function icA(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function icD(a,b){return Math.round((a-b)/864e5)}
+function icS(d){return HARI[d.getDay()].slice(0,3)+' '+d.getDate()+' '+BLN[d.getMonth()].slice(0,3)}
+function icL(d){return HARI[d.getDay()]+', '+d.getDate()+' '+BLN[d.getMonth()]+' '+d.getFullYear()}
+function icRp(n){return 'Rp '+Math.round(n).toLocaleString('id-ID')}
+function icPer(d){const C=INC,ps=icP(C.ps),pe=icP(C.pe);
+if(d>=ps&&d<=pe)return {s:ps,e:pe};
+if(d>pe){const n=Math.floor(icD(d,icA(pe,1))/C.cyc),s=icA(pe,1+n*C.cyc);return {s:s,e:icA(s,C.cyc-1)}}
+const e0=icA(ps,-1),k=Math.floor(icD(e0,d)/C.cyc),e=icA(e0,-k*C.cyc);return {s:icA(e,-(C.cyc-1)),e:e}}
+function icPay(per){const C=INC,p1=icP(C.pay1),k=Math.ceil(icD(per.e,p1)/C.cyc);return icA(p1,k*C.cyc)}
+function drawInc(){if(!INC)incLoad();const C=INC,el=$('incsum');if(!el)return;
+const today=icP(dkey(new Date()));if(!INCPER)INCPER=icPer(today);const per=INCPER,isCur=today>=per.s&&today<=per.e,past=today>per.e;
+const rows=[];let tot=0,wdT=0,wdE=0,wdSum=0,nod=0;
+for(let d=per.s;d<=per.e;d=icA(d,1)){const k=dkey(d),auto=((LOG[k]||{}).sel||[]).length,man=C.man[k],eff=man!=null?man:auto,off=C.off.includes(d.getDay());
+tot+=eff;if(!off){wdT++;if(past||(isCur&&(d<today||(d.getTime()===today.getTime()&&eff>0)))){wdE++;wdSum+=eff;if(eff===0)nod++}}
+rows.push({d:d,k:k,auto:auto,man:man,eff:eff,off:off})}
+const avg=wdE?wdSum/wdE:0,rem=wdT-wdE,proj=past?tot:tot+avg*rem,mx=wdT*30*C.rate,pay=icPay(per),dt=icD(pay,today);
+const totDays=icD(per.e,per.s)+1,pct=Math.max(0,Math.min(100,(icD(today,per.s)+1)/totDays*100));
+const kv=(a,b)=>'<div class="kv"><span>'+a+'</span><b>'+b+'</b></div>';
+el.innerHTML='<div class="ichead"><button class="g" id="icprev" aria-label="Periode sebelumnya">◀</button><div style="text-align:center"><b>'+icS(per.s)+' – '+icS(per.e)+'</b><div class="ad">'+(isCur?'Periode berjalan':past?'Periode selesai':'Periode mendatang')+'</div></div><button class="g" id="icnext" aria-label="Periode berikutnya">▶</button></div>'
++'<div class="icbig">'+icRp(tot*C.rate)+'</div><div class="ad" style="text-align:center">'+(past?'total periode ini':'didapat sejauh ini')+' ('+tot+' alamat × '+icRp(C.rate)+')</div>'
++(isCur?'<div class="hb2"><i style="width:'+pct+'%"></i></div><div class="ad" style="text-align:center">Hari ke-'+(icD(today,per.s)+1)+' dari '+totDays+'</div>':'')
++'<div style="margin-top:10px">'
++(past?'':kv('Perkiraan akhir periode',icRp(proj*C.rate)))
++kv('Maksimal jika 30 alamat/hari',icRp(mx))
++kv('Hari kerja',wdE+' dari '+wdT)
++kv('Rata-rata per hari kerja',avg.toFixed(1)+' alamat')
++(past?'':kv('Sisa hari kerja',rem))
++kv('Gajian',icL(pay)+(dt>0?' ('+dt+' hari lagi)':dt===0?' (hari ini)':' (sudah cair)'))
++'</div>'
++(nod>0&&(isCur||past)?'<div class="icw">⚠ '+nod+' hari kerja belum ada data (0 alamat). Isi manual di Rincian per hari agar perkiraan lebih akurat.</div>':'')
++(isCur?'':'<div class="row"><button class="g" id="ictoday">Kembali ke periode berjalan</button></div>');
+$('incdays').innerHTML=rows.map(r=>'<div class="ir'+(r.off?' off':'')+'"><div style="flex:1"><b>'+icS(r.d)+'</b>'+(r.off?' <span class="ad">libur</span>':'')+'<div class="ad">rekap '+r.auto+' alamat · '+icRp(r.eff*C.rate)+'</div></div><input type="number" min="0" max="999" inputmode="numeric" data-ik="'+r.k+'" placeholder="'+r.auto+'" value="'+(r.man!=null?r.man:'')+'"></div>').join('');
+$('inrate').value=C.rate;$('inps').value=C.ps;$('inpe').value=C.pe;$('incyc').value=C.cyc;$('inp1').value=C.pay1;$('inosat').checked=C.off.includes(6);$('inosun').checked=C.off.includes(0)}
+$('incsum').addEventListener('click',e=>{if(!INC)incLoad();
+if(e.target.closest('#icprev')){INCPER=icPer(icA(INCPER.s,-1));drawInc()}
+else if(e.target.closest('#icnext')){INCPER=icPer(icA(INCPER.e,1));drawInc()}
+else if(e.target.closest('#ictoday')){INCPER=null;drawInc()}});
+$('incdays').addEventListener('change',e=>{const i=e.target.closest('input[data-ik]');if(!i)return;if(!INC)incLoad();
+if(i.value===''||isNaN(+i.value))delete INC.man[i.dataset.ik];else INC.man[i.dataset.ik]=Math.max(0,Math.round(+i.value));incSave();drawInc()});
+function incSet(){if(!INC)incLoad();const C=INC;C.rate=Math.max(0,+$('inrate').value||0);
+if($('inps').value)C.ps=$('inps').value;if($('inpe').value)C.pe=$('inpe').value;if(icP(C.ps)>icP(C.pe)){const t=C.ps;C.ps=C.pe;C.pe=t}
+C.cyc=Math.max(1,Math.round(+$('incyc').value)||14);if($('inp1').value)C.pay1=$('inp1').value;
+C.off=[];if($('inosat').checked)C.off.push(6);if($('inosun').checked)C.off.push(0);incSave();INCPER=null;drawInc()}
+['inrate','inps','inpe','incyc','inp1','inosat','inosun'].forEach(i=>$(i).addEventListener('change',incSet));
+$('inrst').onclick=()=>{if(!INC)incLoad();INC=Object.assign({},INC_DEF,{man:INC.man});incSave();INCPER=null;drawInc()};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){INCPER=null;try{drawInc()}catch(e){}}});
+incLoad();drawInc();
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
