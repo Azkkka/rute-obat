@@ -297,6 +297,7 @@ button:active,a.b:active{transform:scale(.97)}
 #incd summary{cursor:pointer;font-weight:700;list-style:none}#incd summary::-webkit-details-marker{display:none}
 .icw{background:var(--ok);border-radius:12px;padding:9px 12px;font-size:13px;margin-top:10px}
 #rrd summary{list-style:none}#rrd summary::-webkit-details-marker{display:none}
+#edbg{position:fixed;inset:0;z-index:44;background:rgba(5,15,13,.55);opacity:0;pointer-events:none;transition:opacity .3s}#edbg.open{opacity:1;pointer-events:auto}
 </style>
 </head>
 <body>
@@ -462,6 +463,20 @@ button:active,a.b:active{transform:scale(.97)}
 
 <p class="hint" style="text-align:center;margin:18px 0 6px">Aplikasi dibuat oleh <b>Azkkka</b></p>
 </main>
+<div id="edbg"></div>
+<div class="sheet" id="edit">
+<div class="sh"><div class="grab"></div><div class="sht"><b id="edt">Edit pasien</b><button class="g" id="edx" aria-label="Tutup">✕</button></div></div>
+<div class="sbody">
+<label style="font-weight:500;margin-top:10px">Nama pasien</label><input id="edn" autocomplete="off">
+<label style="font-weight:500;margin-top:10px">Alamat rumah</label><input id="eda" autocomplete="off">
+<label style="font-weight:500;margin-top:10px">Nomor HP / WA</label><input id="edp" inputmode="tel" autocomplete="off">
+<label style="font-weight:500;margin-top:10px">Lokasi (angka koordinat atau link Google Maps)</label><input id="edl" autocomplete="off" placeholder="contoh: -7.4711,110.2250">
+<div id="edpv" class="hint" style="margin-top:6px"></div>
+<div class="row"><button class="g" id="edgps">📍 Pakai lokasi saya sekarang</button></div>
+<label id="edbw" style="font-weight:500;display:flex;gap:8px;align-items:center;margin-top:12px"><input type="checkbox" id="edb" style="width:auto"> Perbarui juga di buku pasien</label>
+<div class="row"><button class="big" id="edsave">Simpan perubahan</button></div>
+<div class="row"><button class="g" id="edcancel">Batal</button></div>
+</div></div>
 <div id="toast"></div>
 <div id="fin"><div class="fbox">
 <svg viewBox="0 0 80 80" width="96" height="96"><circle class="fc" cx="40" cy="40" r="34" fill="none" stroke="currentColor" stroke-width="5"/><path class="fk" d="M24 41 l11 11 l21 -23" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -492,8 +507,8 @@ return {name:p[0]||('Tujuan '+(i+1)),addr:p[1]||'',phone:ph(pc||''),lat:c&&c.lat
 let pts=[];
 function parse(){return pts.map(x=>({...x}))}
 function drawList(){setTimeout(()=>{try{drawBook()}catch(e){}},0);setTimeout(updUI,0);setTimeout(()=>{window.__new=-1},60);$('cnt').textContent='2. Daftar pasien ('+pts.length+' dari 30)';
-$('plist').innerHTML=pts.map((x,i)=>'<div class="stop'+(i===window.__new?' new':'')+'"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(x.name)+'</div><div class="ad">'+esc(x.addr)+(x.phone?' · '+esc(x.phone):'')+'</div><div class="'+(x.ok?'dist':'warn')+'">'+(x.ok?'✔ Lokasi sudah diisi':'⚠ Lokasi belum diisi')+'</div></div><button class="g" data-r="'+i+'">Hapus</button></div>').join('')||'<div class="hint">Belum ada pasien. Isi form di atas lalu tekan Tambah.</div>';
-document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{pts.splice(+b.dataset.r,1);save();drawList()})}
+$('plist').innerHTML=pts.map((x,i)=>'<div class="stop'+(i===window.__new?' new':'')+'"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(x.name)+'</div><div class="ad">'+esc(x.addr)+(x.phone?' · '+esc(lp(x.phone)):'')+'</div><div class="'+(x.ok?'dist':'warn')+'">'+(x.ok?'✔ Lokasi sudah diisi':'⚠ Lokasi belum diisi')+'</div></div><div style="display:flex;flex-direction:column;gap:6px"><button class="g" data-ed="'+i+'" style="padding:7px 12px;font-size:13px">✏️ Edit</button><button class="g" data-r="'+i+'" style="padding:7px 12px;font-size:13px">Hapus</button></div></div>').join('')||'<div class="hint">Belum ada pasien. Isi form di atas lalu tekan Tambah.</div>';
+document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{pts.splice(+b.dataset.r,1);save();drawList()});document.querySelectorAll('[data-ed]').forEach(b=>{b.onclick=()=>openEd('list',+b.dataset.ed)})}
 function len(path,s){let d=0,p=s;for(const x of path){d+=hav(p,x);p=x}return d}
 function order(pts,s){ // nearest neighbour + 2-opt
 let left=pts.slice(),path=[],cur=s;
@@ -956,7 +971,7 @@ $('bkt').textContent='📚 Pilih dari pasien sebelumnya ('+BOOK.length+')';
 $('bkdl').innerHTML=BOOK.map(b=>'<option value="'+esc(b.name)+'">'+esc(b.addr||'')+'</option>').join('');
 const list=BOOK.filter(b=>!q||(b.name+' '+b.addr+' '+b.phone).toLowerCase().includes(q)).sort((a,b)=>(b.t||'').localeCompare(a.t||'')||(b.n||0)-(a.n||0)).slice(0,80);
 $('bkl').innerHTML=list.map(b=>{const k=bkey(b),inl=pts.some(p=>bkey(p)===k),sel=BSEL.has(k);
-return '<label class="bki'+(sel?' sel':'')+'" data-k="'+esc(k)+'"><input type="checkbox" '+(sel?'checked ':'')+(inl?'disabled ':'')+'style="width:auto"><div style="flex:1"><div class="nm">'+esc(b.name)+(inl?' <span class="ad">(sudah di daftar)</span>':'')+'</div><div class="ad">'+esc(b.addr||'(tanpa alamat)')+'</div><div class="ad">'+(b.phone?'📞 '+esc(lp(b.phone))+' · ':'')+(b.ok?'🧭 lokasi ada':'⚠ lokasi belum ada')+(b.n?' · diantar '+b.n+'×':'')+'</div></div><button class="g" data-bd="'+esc(k)+'" style="padding:6px 10px;font-size:12px">Hapus</button></label>'}).join('')
+return '<label class="bki'+(sel?' sel':'')+'" data-k="'+esc(k)+'"><input type="checkbox" '+(sel?'checked ':'')+(inl?'disabled ':'')+'style="width:auto"><div style="flex:1"><div class="nm">'+esc(b.name)+(inl?' <span class="ad">(sudah di daftar)</span>':'')+'</div><div class="ad">'+esc(b.addr||'(tanpa alamat)')+'</div><div class="ad">'+(b.phone?'📞 '+esc(lp(b.phone))+' · ':'')+(b.ok?'🧭 lokasi ada':'⚠ lokasi belum ada')+(b.n?' · diantar '+b.n+'×':'')+'</div></div><button class="g" data-bd="'+esc(k)+'" style="padding:6px 10px;font-size:12px">Hapus</button><button class="g" data-be="'+esc(k)+'" style="padding:6px 10px;font-size:12px">Edit</button></label>'}).join('')
 ||'<div class="hint" style="margin-top:8px">'+(BOOK.length?'Tidak ada yang cocok.':'Belum ada pasien tersimpan. Pasien yang Anda tambahkan atau antar akan muncul di sini.')+'</div>';
 $('bka').textContent=BSEL.size?'+ Tambahkan '+BSEL.size+' terpilih':'+ Tambahkan terpilih';$('bka').disabled=!BSEL.size}
 $('bks').oninput=drawBook;
@@ -1098,6 +1113,46 @@ $('rrep').addEventListener('change',rpPreview);
 $('rrestore').onclick=rpRestore;
 $('rpclr').onclick=()=>{$('rpaste').value='';$('rpd').dataset.u='';rpPreview()};
 drawTrash();
+
+/* ===== Edit pasien (daftar dan buku pasien) ===== */
+var ED=null;
+function edPv(){const l=$('edl').value.trim(),c=l?coord(l):null;
+$('edpv').innerHTML=!l?'Lokasi kosong: pasien ini tidak ikut disusun urutan rutenya.':c?'🧭 '+c.lat.toFixed(5)+', '+c.lng.toFixed(5)+' · <a href="'+mapsUrl(c)+'" target="_blank" rel="noopener" style="color:var(--pri)">Cek di Maps</a>':'<span style="color:#c0392b">⚠ Lokasi tidak terbaca. Tempel angka koordinat atau link Google Maps yang panjang.</span>'}
+function openEd(kind,ref){const x=kind==='list'?pts[ref]:BOOK.find(b=>bkey(b)===ref);if(!x)return;
+ED={kind:kind,ref:ref,old:{name:x.name,addr:x.addr||'',phone:x.phone||'',lat:x.lat,lng:x.lng,ok:!!x.ok}};
+$('edn').value=x.name;$('eda').value=x.addr||'';$('edp').value=lp(x.phone);$('edl').value=x.ok&&x.lat!=null?x.lat.toFixed(6)+','+x.lng.toFixed(6):'';
+$('edb').checked=true;$('edbw').style.display=kind==='list'?'flex':'none';
+$('edt').textContent=kind==='list'?'Edit pasien di daftar':'Edit pasien tersimpan';
+edPv();$('edit').classList.add('open');$('edbg').classList.add('open');document.body.style.overflow='hidden'}
+function closeEd(){$('edit').classList.remove('open');$('edbg').classList.remove('open');document.body.style.overflow='';ED=null}
+function bookReplace(old,nx){const ko=bkey(old),kn=bkey(nx);let b=BOOK.find(q=>bkey(q)===ko);
+const dup=ko!==kn?BOOK.find(q=>bkey(q)===kn&&q!==b):null;
+if(b&&dup){dup.n=Math.max(dup.n||0,b.n||0);BOOK=BOOK.filter(q=>q!==b);b=dup}
+if(!b){bookUpsert(nx,false);return}
+b.name=nx.name;b.addr=nx.addr;b.phone=nx.phone;b.lat=nx.ok?nx.lat:null;b.lng=nx.ok?nx.lng:null;b.ok=!!nx.ok;b.t=dkey(new Date());
+BSEL.delete(ko);saveBook();drawBook()}
+function patchRoute(old,nx){const P=state.path||[],i=P.findIndex(q=>q.name===old.name&&(q.addr||'')===old.addr);if(i<0)return false;
+const it=P[i],ok_=old.name+i,nk=nx.name+i;
+if(ok_!==nk){['done','dt','conf'].forEach(m=>{if(state[m]&&ok_ in state[m]){state[m][nk]=state[m][ok_];delete state[m][ok_]}})}
+it.name=nx.name;it.addr=nx.addr;it.phone=nx.phone;
+const moved=nx.ok&&(it.lat!==nx.lat||it.lng!==nx.lng);if(nx.ok){it.lat=nx.lat;it.lng=nx.lng;it.ok=true}
+render();return moved}
+function saveEd(){if(!ED)return;const n=$('edn').value.trim();if(!n){shake($('edn'));$('edn').focus();return}
+const addr=$('eda').value.trim(),phone=ph($('edp').value),l=$('edl').value.trim(),c=l?coord(l):null;
+if(l&&!c&&!confirm('Lokasi tidak terbaca. Simpan tanpa lokasi?'))return;
+const nx={name:n,addr:addr,phone:phone,lat:c?c.lat:null,lng:c?c.lng:null,ok:!!c},old=ED.old;let moved=false;
+if(ED.kind==='list'){if(pts.some((q,i)=>i!==ED.ref&&bkey(q)===bkey(nx))){toast('Pasien dengan nama dan alamat yang sama sudah ada di daftar');return}
+Object.assign(pts[ED.ref],nx);moved=patchRoute(old,nx);save();drawList();if($('edb').checked)bookReplace(old,nx)}
+else bookReplace(old,nx);
+closeEd();toast(moved?'Disimpan. Tekan Susun Rute Terdekat lagi agar urutan mengikuti lokasi baru.':'Perubahan disimpan ✓')}
+$('edl').addEventListener('input',edPv);
+$('edsave').onclick=saveEd;$('edcancel').onclick=closeEd;$('edx').onclick=closeEd;$('edbg').onclick=closeEd;
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('edit').classList.contains('open'))closeEd()});
+$('edgps').onclick=()=>{if(!navigator.geolocation||SET.gps===false){toast(SET.gps===false?'GPS dimatikan di Pengaturan':'GPS tidak tersedia');return}
+const b=$('edgps'),t=b.textContent;b.textContent='Mencari sinyal GPS...';
+freshFix(p=>{b.textContent='Mencari... ±'+Math.round(p.coords.accuracy)+' m'}).then(p=>{b.textContent=t;$('edl').value=p.coords.latitude.toFixed(6)+','+p.coords.longitude.toFixed(6);edPv();toast('Lokasi terisi (akurasi ±'+Math.round(p.coords.accuracy)+' m)')},
+e=>{b.textContent=t;toast(e&&e.code===1?'Izin lokasi ditolak':'Lokasi belum bisa dibaca, coba di tempat terbuka')})};
+$('bkl').addEventListener('click',e=>{const b=e.target.closest('[data-be]');if(!b)return;e.preventDefault();openEd('book',b.dataset.be)});
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
