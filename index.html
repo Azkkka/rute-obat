@@ -296,6 +296,7 @@ button:active,a.b:active{transform:scale(.97)}
 .ir{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--bd);border-radius:12px;margin-top:6px}.ir.off{opacity:.6}.ir input{width:76px;padding:8px;text-align:center}
 #incd summary{cursor:pointer;font-weight:700;list-style:none}#incd summary::-webkit-details-marker{display:none}
 .icw{background:var(--ok);border-radius:12px;padding:9px 12px;font-size:13px;margin-top:10px}
+#rrd summary{list-style:none}#rrd summary::-webkit-details-marker{display:none}
 </style>
 </head>
 <body>
@@ -427,6 +428,19 @@ button:active,a.b:active{transform:scale(.97)}
 <div class="hint">Rekap mencatat pasien yang Anda tandai ✓ Selesai, lengkap dengan jam sampai detik. Tersimpan di HP dan tidak ikut terhapus saat "Hapus semua" pasien.</div>
 <div id="rhist" style="margin-top:8px"></div>
 </div>
+<div class="card" id="rrc">
+<details id="rrd"><summary style="cursor:pointer;font-weight:700">📥 Pulihkan rekap dari teks yang disalin</summary>
+<div class="hint" style="margin-top:8px">Tempel teks hasil <b>Salin rekap</b> untuk satu hari. Aplikasi membaca tanggal, nama, alamat, nomor telepon, koordinat, dan jam selesai. Format rekap lama maupun baru didukung.</div>
+<textarea id="rpaste" style="min-height:170px;margin-top:8px" placeholder="Tempel seluruh rekap hari itu di sini..."></textarea>
+<label style="font-weight:500;margin-top:8px">Tanggal rekap</label><input type="date" id="rpd">
+<label style="font-weight:500;display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="rrep" style="width:auto"> Ganti seluruh rekap tanggal ini (yang ada dipindah ke tempat sampah)</label>
+<div id="rprev" style="margin-top:8px"></div>
+<div class="row"><button class="big" id="rrestore" disabled>Pulihkan rekap</button></div>
+<div class="row"><button class="g" id="rpclr">Kosongkan kolom</button></div>
+<div class="hint" style="margin-top:14px"><b>Rekap yang baru dihapus</b> (disimpan 10 terakhir)</div>
+<div id="rtrash"></div>
+</details></div>
+
 <div class="card" id="inc">
 <label>💰 Perkiraan pendapatan</label>
 <div id="incsum"></div>
@@ -597,7 +611,7 @@ $('rd').value=dkey(new Date());$('rd').onchange=drawRekap;
 $('rcopy').onclick=()=>{const t=rekapText();
 const fb=()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast('Rekap disalin ✓')}catch(e){alert('Gagal menyalin. Salin manual dari layar.')}a.remove()};
 if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast('Rekap disalin ✓'),fb);else fb()};
-$('rdel').onclick=()=>{const k=$('rd').value;if(LOG[k]&&confirm('Hapus rekap tanggal '+fmtTgl(k)+'?')){delete LOG[k];saveLog();drawRekap()}};
+$('rdel').onclick=()=>{const k=$('rd').value;if(LOG[k]&&confirm('Hapus rekap tanggal '+fmtTgl(k)+'? Masih bisa dipulihkan dari "Rekap yang baru dihapus".')){trashPut(k);delete LOG[k];saveLog();drawRekap();toast('Rekap dihapus. Bisa dipulihkan di bagian Pulihkan rekap.')}};
 drawRekap();
 
 
@@ -1016,6 +1030,74 @@ C.off=[];if($('inosat').checked)C.off.push(6);if($('inosun').checked)C.off.push(
 $('inrst').onclick=()=>{if(!INC)incLoad();INC=Object.assign({},INC_DEF,{man:INC.man});incSave();INCPER=null;drawInc()};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){INCPER=null;try{drawInc()}catch(e){}}});
 incLoad();drawInc();
+
+/* ===== Pulihkan rekap dari teks yang disalin ===== */
+var TR={},RPP=null;
+try{TR=JSON.parse(localStorage.getItem('rao-trash')||'{}')}catch(e){TR={}}
+function saveTrash(){try{localStorage.setItem('rao-trash',JSON.stringify(TR))}catch(e){}}
+function trashPut(k){const D=LOG[k];if(!D||!((D.sel&&D.sel.length)||(D.rute&&D.rute.length)||D.note))return;
+TR[k]={d:JSON.parse(JSON.stringify(D)),at:Date.now()};Object.keys(TR).sort((a,b)=>TR[b].at-TR[a].at).slice(10).forEach(x=>delete TR[x]);saveTrash();try{drawTrash()}catch(e){}}
+function drawTrash(){const ks=Object.keys(TR).sort((a,b)=>TR[b].at-TR[a].at);
+$('rtrash').innerHTML=ks.length?ks.map(k=>'<div class="ir"><div style="flex:1"><b>'+esc(fmtTgl(k))+'</b><div class="ad">'+(TR[k].d.sel||[]).length+' pasien · dihapus '+esc(new Date(TR[k].at).toLocaleString('id-ID'))+'</div></div><button class="g" data-tr="'+k+'" style="padding:7px 12px;font-size:13px">Pulihkan</button><button class="g" data-trx="'+k+'" style="padding:7px 12px;font-size:13px" aria-label="Hapus permanen">✕</button></div>').join(''):'<div class="hint">Tidak ada rekap yang baru dihapus.</div>'}
+$('rtrash').addEventListener('click',e=>{const a=e.target.closest('[data-tr]'),x=e.target.closest('[data-trx]');
+if(a){const k=a.dataset.tr,src=TR[k];if(!src)return;const D=dayOf(k);(src.d.sel||[]).forEach(q=>{if(!D.sel.some(z=>z.k===q.k))D.sel.push(q)});
+(src.d.rute||[]).forEach(r=>{if(!D.rute.some(z=>z.t===r.t&&z.n===r.n))D.rute.push(r)});if(src.d.note&&!D.note)D.note=src.d.note;
+delete TR[k];saveTrash();saveLog();$('rd').value=k;drawRekap();drawTrash();toast('Rekap '+fmtTgl(k)+' dipulihkan ✓')}
+else if(x){delete TR[x.dataset.trx];saveTrash();drawTrash()}});
+function parseRekap(txt){const out={date:null,entries:[],rute:[],warn:[]};const L=String(txt||'').replace(/\r/g,'').split('\n');
+let cur=null,started=false;const seen=new Set();
+const done=()=>{if(!cur)return;if(!cur.t){cur.t='00:00:00';out.warn.push('Tanpa jam selesai: '+cur.name)}
+const id=cur.name+'|'+(cur.addr||'');if(!seen.has(id)){seen.add(id);out.entries.push(cur)}cur=null};
+for(const raw of L){const ln=raw.trim();if(!ln)continue;let m;
+if(!started&&!out.date){m=ln.match(/(\d{1,2})\s+(Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)\s+(\d{4})/i);
+if(m){const mi=BLN.findIndex(x=>x.toLowerCase()===m[2].toLowerCase());out.date=m[3]+'-'+pad(mi+1)+'-'+pad(+m[1]);continue}
+m=ln.match(/(\d{4})-(\d{2})-(\d{2})/);if(m){out.date=m[0];continue}}
+m=ln.match(/Rute disusun pukul\s+(\d{1,2}:\d{2}:\d{2})\s*\((\d+)\s*pasien(?:[^)]*?([\d.,]+)\s*km)?\)/i);
+if(m&&!started){out.rute.push({t:m[1].padStart(8,'0'),n:+m[2],km:m[3]?(parseFloat(m[3].replace(',','.'))||0):0});continue}
+m=ln.match(/^(\d+)[.)]\s+(.+)$/);
+if(m){started=true;done();const rest=m[2],v1=rest.match(/^(\d{1,2}:\d{2}:\d{2})\s+[-–]\s+(.+)$/);
+if(v1){let body=v1[2],c=false;if(/\[alamat[^\]]*\]\s*$/i.test(body)){c=true;body=body.replace(/\s*\[alamat[^\]]*\]\s*$/i,'')}
+const mm=body.match(/^(.*?)\s*\((.+)\)\s*$/);cur={name:(mm?mm[1]:body).trim(),addr:mm?mm[2].trim():'',phone:'',lat:null,lng:null,t:v1[1].padStart(8,'0'),c:c};done()}
+else cur={name:rest.trim(),addr:'',phone:'',lat:null,lng:null,t:'',c:false};
+continue}
+if(!cur)continue;
+if(m=ln.match(/^Selesai pukul\s+(\d{1,2}:\d{2}:\d{2})/i)){cur.t=m[1].padStart(8,'0');continue}
+if(m=ln.match(/^Alamat:\s*(.+)$/i)){cur.addr=m[1].trim();continue}
+if(m=ln.match(/^Telp:\s*(.+)$/i)){cur.phone=ph(m[1]);continue}
+if(m=ln.match(/^Koordinat:\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/i)){cur.lat=+m[1];cur.lng=+m[2];continue}
+if(m=ln.match(/query=(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/i)){if(cur.lat==null){cur.lat=+m[1];cur.lng=+m[2]}continue}
+if(/\[alamat[^\]]*\]/i.test(ln)){cur.c=true;continue}}
+done();return out}
+function rpPreview(){const txt=$('rpaste').value,pv=$('rprev'),btn=$('rrestore');
+if(!txt.trim()){RPP=null;pv.innerHTML='';btn.disabled=true;$('rpd').dataset.u='';return}
+RPP=parseRekap(txt);if(RPP.date&&!$('rpd').dataset.u)$('rpd').value=RPP.date;
+const date=$('rpd').value,n=RPP.entries.length,ex=date&&LOG[date]?LOG[date].sel.length:0;
+let h='<div class="sum">'+(n?'✓ Terbaca '+n+' pasien':'✗ Belum ada pasien yang terbaca')+(date?' · '+esc(fmtTgl(date)):'')+'</div>';
+if(!date)h+='<div class="icw">Tanggal tidak terbaca dari teks. Pilih tanggal rekap di atas.</div>';
+h+=RPP.entries.slice(0,8).map((e,i)=>'<div class="ad">'+(i+1)+'. '+esc(e.name)+' · '+e.t+(e.addr?' · '+esc(e.addr):'')+(e.phone?' · 📞':'')+(e.lat!=null?' · 🧭':'')+'</div>').join('');
+if(n>8)h+='<div class="ad">... dan '+(n-8)+' pasien lainnya</div>';
+if(RPP.rute.length)h+='<div class="ad">Catatan rute disusun: '+RPP.rute.length+'</div>';
+if(ex&&!$('rrep').checked)h+='<div class="icw">Rekap tanggal ini sudah berisi '+ex+' pasien. Pasien yang sama dilewati, yang baru ditambahkan.</div>';
+if(ex&&$('rrep').checked)h+='<div class="icw">Rekap yang ada ('+ex+' pasien) akan dipindah ke tempat sampah lalu diganti.</div>';
+RPP.warn.slice(0,5).forEach(w=>{h+='<div class="icw">⚠ '+esc(w)+'</div>'});
+pv.innerHTML=h;btn.disabled=!(n&&date)}
+function rpRestore(){if(!RPP||!RPP.entries.length)return;const date=$('rpd').value;if(!date){toast('Pilih tanggal rekap dulu');return}
+const rep=$('rrep').checked;if(rep)trashPut(date);const D=dayOf(date);if(rep){D.sel=[];D.rute=[]}
+let add=0,skip=0;
+RPP.entries.forEach(e=>{const id=ekey(date,e),ex=D.sel.find(q=>q.k===id);
+if(ex){skip++;if(!ex.phone&&e.phone)ex.phone=e.phone;if(ex.lat==null&&e.lat!=null){ex.lat=e.lat;ex.lng=e.lng}return}
+D.sel.push({k:id,name:e.name,addr:e.addr,phone:e.phone||'',lat:e.lat,lng:e.lng,t:e.t,c:!!e.c});add++;
+bookUpsert({name:e.name,addr:e.addr,phone:e.phone,lat:e.lat,lng:e.lng,ok:e.lat!=null},true)});
+RPP.rute.forEach(r=>{if(!D.rute.some(q=>q.t===r.t&&q.n===r.n))D.rute.push(r)});
+saveLog();$('rd').value=date;drawRekap();
+toast('Rekap dipulihkan: '+add+' pasien ditambahkan'+(skip?', '+skip+' sudah ada':'')+' ✓');
+$('rpaste').value='';$('rpd').dataset.u='';$('rrep').checked=false;rpPreview()}
+$('rpaste').addEventListener('input',rpPreview);
+$('rpd').addEventListener('change',()=>{$('rpd').dataset.u='1';rpPreview()});
+$('rrep').addEventListener('change',rpPreview);
+$('rrestore').onclick=rpRestore;
+$('rpclr').onclick=()=>{$('rpaste').value='';$('rpd').dataset.u='';rpPreview()};
+drawTrash();
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
