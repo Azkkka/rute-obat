@@ -298,6 +298,7 @@ button:active,a.b:active{transform:scale(.97)}
 .icw{background:var(--ok);border-radius:12px;padding:9px 12px;font-size:13px;margin-top:10px}
 #rrd summary{list-style:none}#rrd summary::-webkit-details-marker{display:none}
 #edbg{position:fixed;inset:0;z-index:44;background:rgba(5,15,13,.55);opacity:0;pointer-events:none;transition:opacity .3s}#edbg.open{opacity:1;pointer-events:auto}
+.r2d{border-top:1px solid var(--bd)}.r2d summary{cursor:pointer;padding:9px 0;list-style:none}.r2d summary::-webkit-details-marker{display:none}
 </style>
 </head>
 <body>
@@ -429,6 +430,15 @@ button:active,a.b:active{transform:scale(.97)}
 <div class="hint">Rekap mencatat pasien yang Anda tandai ✓ Selesai, lengkap dengan jam sampai detik. Tersimpan di HP dan tidak ikut terhapus saat "Hapus semua" pasien.</div>
 <div id="rhist" style="margin-top:8px"></div>
 </div>
+<div class="card" id="r2c">
+<label>🗓️ Rekap per 2 minggu</label>
+<div id="r2sum"></div>
+<div id="r2days"></div>
+<div class="row"><button class="big" id="r2xl">📊 Unduh Excel (.xlsx)</button></div>
+<div class="row"><button class="g" id="r2sh">📤 Bagikan Excel</button><button class="g" id="r2cp">Salin rekap 2 minggu</button><button class="g" id="r2tb">Salin sebagai tabel</button></div>
+<div class="hint">Periode mengikuti siklus gaji di kartu pendapatan (bisa diatur di sana). Isinya hanya pengantaran yang tercatat di rekap harian. Jika Excel tidak terunduh, misalnya saat dibuka di dalam Claude, pakai <b>Salin sebagai tabel</b> lalu tempel ke Excel, atau buka versi aplikasi yang terpasang.</div>
+</div>
+
 <div class="card" id="rrc">
 <details id="rrd"><summary style="cursor:pointer;font-weight:700">📥 Pulihkan rekap dari teks yang disalin</summary>
 <div class="hint" style="margin-top:8px">Tempel teks hasil <b>Salin rekap</b> untuk satu hari. Aplikasi membaca tanggal, nama, alamat, nomor telepon, koordinat, dan jam selesai. Format rekap lama maupun baru didukung.</div>
@@ -612,14 +622,14 @@ let h='<div class="sum">'+fmtTgl(r.k)+'</div><div style="font-size:14px;margin-b
 if(sel.length)h+='<div class="ad">Pengantaran pertama '+sel[0].t+' · terakhir '+sel[sel.length-1].t+'</div>';
 D.rute.forEach(x=>{h+='<div class="ad">Rute disusun pukul '+x.t+' ('+x.n+' pasien, ≈ '+x.km+' km)</div>'});
 h+=sel.map((e,i)=>'<div class="stop"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(e.name)+'</div><div class="ad">📍 '+esc(e.addr||'(alamat tidak tercatat)')+'</div>'+(rp(e)?'<div class="ad">📞 '+esc(lp(rp(e)))+'</div>':'')+(rc(e)?'<div class="ad">🧭 '+fc(rc(e))+' · <a href="'+mapsUrl(rc(e))+'" target="_blank" rel="noopener" style="color:var(--pri)">Buka di Maps</a></div>':'')+'<div class="dist">Selesai pukul '+e.t+(e.c?' · alamat terkonfirmasi':'')+'</div><div class="row" style="margin-top:6px"><button class="g" data-ra="'+i+'" style="padding:7px 12px;font-size:13px">➕ Antar lagi</button></div></div></div>').join('')||'<div class="hint">Belum ada pengantaran tercatat pada tanggal ini.</div>';
-$('rsum').innerHTML=h;try{drawInc()}catch(e){}window.RSEL=sel;document.querySelectorAll('[data-ra]').forEach(b=>{b.onclick=()=>addFromEntry(window.RSEL[+b.dataset.ra])});
+$('rsum').innerHTML=h;try{drawInc()}catch(e){}try{drawR2()}catch(e){}window.RSEL=sel;document.querySelectorAll('[data-ra]').forEach(b=>{b.onclick=()=>addFromEntry(window.RSEL[+b.dataset.ra])});
 const ks=Object.keys(LOG).filter(k=>LOG[k].sel.length||LOG[k].rute.length).sort().reverse().slice(0,30);
 $('rhist').innerHTML=ks.length?'<div class="hint">Riwayat tanggal (tekan untuk membuka):</div><div class="row">'+ks.map(k=>'<button class="g" data-d="'+k+'">'+k.slice(8)+'/'+k.slice(5,7)+' ('+LOG[k].sel.length+')</button>').join('')+'</div>':'';
 document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{$('rd').value=b.dataset.d;drawRekap()})}
 function rekapText(){const r=rekapData(),D=r.D,sel=r.sel,lr=D.rute[D.rute.length-1];
 let t='REKAP ANTAR OBAT\n'+fmtTgl(r.k)+'\n';
 if(lr)t+='Rute disusun pukul '+lr.t+' ('+lr.n+' pasien, sekitar '+lr.km+' km)\n';
-t+='Sudah diantar: '+sel.length+(lr?' dari '+lr.n:'')+'\nAlamat terkonfirmasi: '+sel.filter(e=>e.c).length+'\n';t+='Perkiraan pendapatan hari itu: '+icRp(sel.length*((INC&&INC.rate)||5000))+' ('+sel.length+' alamat)\n';
+t+='Sudah diantar: '+sel.length+(lr?' dari '+lr.n:'')+'\nAlamat terkonfirmasi: '+sel.filter(e=>e.c).length+'\n';
 if(sel.length)t+='Pertama '+sel[0].t+', terakhir '+sel[sel.length-1].t+'\n';
 return t+'\n'+sel.map((e,i)=>(i+1)+'. '+e.name+'\n   Selesai pukul '+e.t+(e.addr?'\n   Alamat: '+e.addr:'')+(rp(e)?'\n   Telp: '+lp(rp(e)):'')+(rc(e)?'\n   Koordinat: '+fc(rc(e))+'\n   Peta: '+mapsUrl(rc(e)):'')+(e.c?'\n   [alamat terkonfirmasi]':'')).join('\n\n')}
 $('rd').value=dkey(new Date());$('rd').onchange=drawRekap;
@@ -1040,7 +1050,7 @@ if(i.value===''||isNaN(+i.value))delete INC.man[i.dataset.ik];else INC.man[i.dat
 function incSet(){if(!INC)incLoad();const C=INC;C.rate=Math.max(0,+$('inrate').value||0);
 if($('inps').value)C.ps=$('inps').value;if($('inpe').value)C.pe=$('inpe').value;if(icP(C.ps)>icP(C.pe)){const t=C.ps;C.ps=C.pe;C.pe=t}
 C.cyc=Math.max(1,Math.round(+$('incyc').value)||14);if($('inp1').value)C.pay1=$('inp1').value;
-C.off=[];if($('inosat').checked)C.off.push(6);if($('inosun').checked)C.off.push(0);incSave();INCPER=null;drawInc()}
+C.off=[];if($('inosat').checked)C.off.push(6);if($('inosun').checked)C.off.push(0);incSave();INCPER=null;drawInc();R2P=null;try{drawR2()}catch(e){}}
 ['inrate','inps','inpe','incyc','inp1','inosat','inosun'].forEach(i=>$(i).addEventListener('change',incSet));
 $('inrst').onclick=()=>{if(!INC)incLoad();INC=Object.assign({},INC_DEF,{man:INC.man});incSave();INCPER=null;drawInc()};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){INCPER=null;try{drawInc()}catch(e){}}});
@@ -1153,6 +1163,76 @@ const b=$('edgps'),t=b.textContent;b.textContent='Mencari sinyal GPS...';
 freshFix(p=>{b.textContent='Mencari... ±'+Math.round(p.coords.accuracy)+' m'}).then(p=>{b.textContent=t;$('edl').value=p.coords.latitude.toFixed(6)+','+p.coords.longitude.toFixed(6);edPv();toast('Lokasi terisi (akurasi ±'+Math.round(p.coords.accuracy)+' m)')},
 e=>{b.textContent=t;toast(e&&e.code===1?'Izin lokasi ditolak':'Lokasi belum bisa dibaca, coba di tempat terbuka')})};
 $('bkl').addEventListener('click',e=>{const b=e.target.closest('[data-be]');if(!b)return;e.preventDefault();openEd('book',b.dataset.be)});
+
+/* ===== Rekap per 2 minggu + ekspor Excel ===== */
+var R2P=null;
+function r2Data(per){const days=[],rows=[];
+for(let d=per.s;d<=per.e;d=icA(d,1)){const k=dkey(d),sel=((LOG[k]||{}).sel||[]).slice().sort((a,b)=>a.t<b.t?-1:a.t>b.t?1:0);days.push({d:d,k:k,sel:sel,man:INC.man[k]});sel.forEach(e=>rows.push({d:d,k:k,e:e}))}
+return {days:days,rows:rows}}
+function r2Cur(){if(!INC)incLoad();if(!R2P)R2P=icPer(icP(dkey(new Date())));return R2P}
+function drawR2(){const el=$('r2sum');if(!el)return;const per=r2Cur(),D=r2Data(per),act=D.days.filter(x=>x.sel.length).length,tot=D.rows.length;
+const noDet=D.days.filter(x=>!x.sel.length&&x.man>0).length,isCur=icP(dkey(new Date()))>=per.s&&icP(dkey(new Date()))<=per.e;
+el.innerHTML='<div class="ichead"><button class="g" id="r2prev" aria-label="Periode sebelumnya">◀</button><div style="text-align:center"><b>'+icS(per.s)+' – '+icS(per.e)+'</b><div class="ad">'+(isCur?'Periode berjalan':'Periode lain')+'</div></div><button class="g" id="r2next" aria-label="Periode berikutnya">▶</button></div>'
++'<div class="chips" style="margin-top:10px;justify-content:center"><span class="chip"><b>'+tot+'</b> alamat diantar</span><span class="chip"><b>'+act+'</b> hari ada pengantaran</span><span class="chip"><b>'+(act?(tot/act).toFixed(1):'0')+'</b> rata-rata/hari</span></div>'
++(noDet?'<div class="icw">'+noDet+' hari memakai angka manual (tanpa rincian pasien) dan tidak ikut rekap ini.</div>':'')
++(isCur?'':'<div class="row"><button class="g" id="r2today">Kembali ke periode berjalan</button></div>');
+$('r2days').innerHTML=act?D.days.filter(x=>x.sel.length).map(x=>'<details class="r2d"><summary><b>'+icL(x.d)+'</b> · '+x.sel.length+' alamat</summary>'+x.sel.map((e,i)=>'<div class="ad" style="padding:6px 0;border-top:1px solid var(--bd)"><b>'+(i+1)+'. '+esc(e.name)+'</b> · '+e.t+'<br>📍 '+esc(e.addr||'-')+(rp(e)?'<br>📞 '+esc(lp(rp(e))):'')+'</div>').join('')+'</details>').join(''):'<div class="hint" style="margin-top:8px">Belum ada rekap pengantaran pada periode ini.</div>'}
+$('r2sum').addEventListener('click',e=>{if(!INC)incLoad();
+if(e.target.closest('#r2prev')){R2P=icPer(icA(R2Cur0().s,-1));drawR2()}
+else if(e.target.closest('#r2next')){R2P=icPer(icA(R2Cur0().e,1));drawR2()}
+else if(e.target.closest('#r2today')){R2P=null;drawR2()}});
+function R2Cur0(){return r2Cur()}
+function r2Text(per){const D=r2Data(per),act=D.days.filter(x=>x.sel.length).length,o=['REKAP PENGANTARAN OBAT','Periode: '+icL(per.s)+' sampai '+icL(per.e),'Total diantar: '+D.rows.length+' alamat dalam '+act+' hari',''];
+D.days.filter(x=>x.sel.length).forEach(x=>{o.push(icL(x.d)+' ('+x.sel.length+' alamat)');
+x.sel.forEach((e,i)=>{o.push((i+1)+'. '+e.t+' - '+e.name);if(e.addr)o.push('   Alamat: '+e.addr);if(rp(e))o.push('   Telp: '+lp(rp(e)));const c=rc(e);if(c)o.push('   Koordinat: '+fc(c));if(e.c)o.push('   [alamat terkonfirmasi]')});o.push('')});
+return o.join('\n')}
+function r2Table(per){const D=r2Data(per),H=['No','Tanggal','Hari','Jam selesai','Nama pasien','Alamat','No. HP','Latitude','Longitude','Alamat terkonfirmasi'];
+const R=[H];D.rows.forEach((r,i)=>{const e=r.e,c=rc(e);R.push([i+1,pad(r.d.getDate())+'/'+pad(r.d.getMonth()+1)+'/'+r.d.getFullYear(),HARI[r.d.getDay()],e.t,e.name,e.addr||'',lp(rp(e)),c?c.lat:'',c?c.lng:'',e.c?'Ya':'Tidak'])});return R}
+function r2Sum(per){const D=r2Data(per),R=[['Tanggal','Hari','Jumlah alamat']];let t=0;
+D.days.filter(x=>x.sel.length).forEach(x=>{t+=x.sel.length;R.push([pad(x.d.getDate())+'/'+pad(x.d.getMonth()+1)+'/'+x.d.getFullYear(),HARI[x.d.getDay()],x.sel.length])});R.push(['Total','',t]);return R}
+/* penulis XLSX minimal (tanpa pustaka) */
+function xlCol(i){let s='';i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s}
+function xlEsc(t){return String(t).replace(/[<>&"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'')}
+function xlSheet(rows,widths){let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>'+widths.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols><sheetData>';
+rows.forEach((r,ri)=>{x+='<row r="'+(ri+1)+'">';r.forEach((v,ci)=>{if(v===null||v===undefined||v==='')return;const ref=xlCol(ci)+(ri+1),st=ri===0?' s="1"':'';
+if(typeof v==='number')x+='<c r="'+ref+'"'+st+'><v>'+v+'</v></c>';else x+='<c r="'+ref+'"'+st+' t="inlineStr"><is><t xml:space="preserve">'+xlEsc(v)+'</t></is></c>'});x+='</row>'});
+return x+'</sheetData></worksheet>'}
+var CRCT=null;
+function crc32(u){if(!CRCT){CRCT=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?(c>>>1)^0xEDB88320:c>>>1;CRCT[n]=c>>>0}}
+let c=0xFFFFFFFF;for(let i=0;i<u.length;i++)c=CRCT[(c^u[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0}
+function zipStore(files){const te=new TextEncoder(),now=new Date(),dt=((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate(),tm2=(now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1);
+const parts=[],cen=[];let off=0;
+files.forEach(f=>{const nm=te.encode(f.name),d=te.encode(f.data),crc=crc32(d);
+const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0,true);h.setUint16(8,0,true);h.setUint16(10,tm2,true);h.setUint16(12,dt,true);h.setUint32(14,crc,true);h.setUint32(18,d.length,true);h.setUint32(22,d.length,true);h.setUint16(26,nm.length,true);h.setUint16(28,0,true);
+parts.push(new Uint8Array(h.buffer),nm,d);
+const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0,true);c.setUint16(10,0,true);c.setUint16(12,tm2,true);c.setUint16(14,dt,true);c.setUint32(16,crc,true);c.setUint32(20,d.length,true);c.setUint32(24,d.length,true);c.setUint16(28,nm.length,true);c.setUint32(42,off,true);
+cen.push(new Uint8Array(c.buffer),nm);off+=30+nm.length+d.length});
+let cs=0;cen.forEach(p=>cs+=p.length);
+const e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+const all=parts.concat(cen,[new Uint8Array(e.buffer)]);let tot=0;all.forEach(p=>tot+=p.length);const out=new Uint8Array(tot);let o=0;all.forEach(p=>{out.set(p,o);o+=p.length});return out}
+function r2Xlsx(per){const X='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+const files=[
+{name:'[Content_Types].xml',data:X+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
+{name:'_rels/.rels',data:X+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+{name:'xl/workbook.xml',data:X+'<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Detail" sheetId="1" r:id="rId1"/><sheet name="Ringkasan" sheetId="2" r:id="rId2"/></sheets></workbook>'},
+{name:'xl/_rels/workbook.xml.rels',data:X+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
+{name:'xl/styles.xml',data:X+'<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFD9EFEA"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'},
+{name:'xl/worksheets/sheet1.xml',data:xlSheet(r2Table(per),[5,12,10,12,26,42,16,12,12,20])},
+{name:'xl/worksheets/sheet2.xml',data:xlSheet(r2Sum(per),[14,12,16])}];
+return zipStore(files)}
+function r2Name(per){return 'rekap-pengantaran-'+dkey(per.s)+'_sd_'+dkey(per.e)+'.xlsx'}
+const XMIME='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+function dlFile(name,u8,mime){const a=document.createElement('a'),url=URL.createObjectURL(new Blob([u8],{type:mime}));a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove()},1500)}
+function copyText(t,okMsg){const fb=()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}a.remove();toast(ok?okMsg:'Gagal menyalin. Coba lagi.')};
+if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(()=>toast(okMsg),fb);else fb()}
+function r2Guard(){const per=r2Cur(),D=r2Data(per);if(!D.rows.length){toast('Belum ada rekap pengantaran pada periode ini');return null}return per}
+$('r2xl').onclick=()=>{const per=r2Guard();if(!per)return;dlFile(r2Name(per),r2Xlsx(per),XMIME);toast('Excel dibuat: '+r2Name(per))};
+$('r2sh').onclick=async()=>{const per=r2Guard();if(!per)return;const u=r2Xlsx(per),name=r2Name(per);
+try{const file=new File([u],name,{type:XMIME});if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return}}catch(e){if(e&&e.name==='AbortError')return}
+dlFile(name,u,XMIME);toast('Berbagi file tidak didukung di sini, Excel diunduh')};
+$('r2cp').onclick=()=>{const per=r2Guard();if(per)copyText(r2Text(per),'Rekap 2 minggu disalin ✓')};
+$('r2tb').onclick=()=>{const per=r2Guard();if(per)copyText(r2Table(per).map(r=>r.map(v=>String(v).replace(/[\t\n\r]+/g,' ')).join('\t')).join('\n'),'Tabel disalin. Tempel di Excel ✓')};
+drawR2();
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
