@@ -382,6 +382,12 @@ button:active,a.b:active{transform:scale(.97)}
 <div id="gpsbox" class="hint" style="display:none;margin-top:8px">Posisi HP dibaca otomatis saat Anda menekan <b>Susun Rute Terdekat</b>. Pilih <b>Izinkan</b> jika HP meminta akses lokasi.
 <div id="livest" style="margin-top:8px;color:var(--tx);font-size:13px"></div>
 <div class="row"><button class="g" id="lrf">🔄 Segarkan lokasi</button></div></div>
+<div class="hint" style="margin-top:14px"><b>🏠 Rumah (titik pulang)</b></div>
+<input id="home" placeholder="Koordinat rumah, contoh: -7.7500,110.3800" style="margin-top:6px">
+<div class="row"><button class="g" id="homegps">📍 Saya sedang di rumah, simpan lokasi ini</button></div>
+<label style="font-weight:500;display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="homeuse" checked style="width:auto"> Sertakan perjalanan pulang dalam rute</label>
+<div class="hint" id="homest" style="margin-top:6px"></div>
+<div class="hint">Urutan pasien disusun agar rute dari awal, melewati semua pasien, lalu sampai ke rumah sependek mungkin. Setelah mengubah lokasi rumah, tekan Susun Rute Terdekat lagi.</div>
 </div>
 </div>
 
@@ -519,20 +525,19 @@ function parse(){return pts.map(x=>({...x}))}
 function drawList(){setTimeout(()=>{try{drawBook()}catch(e){}},0);setTimeout(updUI,0);setTimeout(()=>{window.__new=-1},60);$('cnt').textContent='2. Daftar pasien ('+pts.length+' dari 30)';
 $('plist').innerHTML=pts.map((x,i)=>'<div class="stop'+(i===window.__new?' new':'')+'"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(x.name)+'</div><div class="ad">'+esc(x.addr)+(x.phone?' · '+esc(lp(x.phone)):'')+'</div><div class="'+(x.ok?'dist':'warn')+'">'+(x.ok?'✔ Lokasi sudah diisi':'⚠ Lokasi belum diisi')+'</div></div><div style="display:flex;flex-direction:column;gap:6px"><button class="g" data-ed="'+i+'" style="padding:7px 12px;font-size:13px">✏️ Edit</button><button class="g" data-r="'+i+'" style="padding:7px 12px;font-size:13px">Hapus</button></div></div>').join('')||'<div class="hint">Belum ada pasien. Isi form di atas lalu tekan Tambah.</div>';
 document.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>{pts.splice(+b.dataset.r,1);save();drawList()});document.querySelectorAll('[data-ed]').forEach(b=>{b.onclick=()=>openEd('list',+b.dataset.ed)})}
-function len(path,s){let d=0,p=s;for(const x of path){d+=hav(p,x);p=x}return d}
-function order(pts,s){ // nearest neighbour + 2-opt
-let left=pts.slice(),path=[],cur=s;
+function len(path,s,h){let d=0,p=s;for(const x of path){d+=hav(p,x);p=x}if(h&&path.length)d+=hav(p,h);return d}
+function order(pts,s,h){let left=pts.slice(),path=[],cur=s;
 while(left.length){let bi=0,bd=1e9;left.forEach((x,i)=>{const d=hav(cur,x);if(d<bd){bd=d;bi=i}});cur=left.splice(bi,1)[0];path.push(cur)}
-let imp=true;
-while(imp){imp=false;for(let i=0;i<path.length-1;i++)for(let j=i+1;j<path.length;j++){
-const n=path.slice(0,i).concat(path.slice(i,j+1).reverse(),path.slice(j+1));
-if(len(n,s)<len(path,s)-1e-6){path=n;imp=true}}}
+let imp=true,g=0;
+while(imp&&g++<40){imp=false;
+for(let i=0;i<path.length-1;i++)for(let j=i+1;j<path.length;j++){const n=path.slice(0,i).concat(path.slice(i,j+1).reverse(),path.slice(j+1));if(len(n,s,h)<len(path,s,h)-1e-6){path=n;imp=true}}
+for(let i=0;i<path.length;i++)for(let j=0;j<path.length;j++){if(i===j)continue;const n=path.slice(),x=n.splice(i,1)[0];n.splice(j,0,x);if(len(n,s,h)<len(path,s,h)-1e-6){path=n;imp=true}}}
 return path}
 function ph(t){let d=(t||'').replace(/\D/g,'');if(!d)return'';if(d[0]==='0')d='62'+d.slice(1);else if(d[0]==='8')d='62'+d;return d.length>=10?d:''}
 const DEF='Selamat {salam}, saya mau mengantarkan obat dari RS UAD';
 function msg(x){return $('tpl').value.replace(/\{salam\}/g,salam()).replace(/\{nama\}/g,x.name).replace(/\{alamat\}/g,x.addr||'(belum tercatat)')}
 function contact(x,k){let h='';if(x.phone)h+='<a class="b g" href="tel:+'+x.phone+'">📞 Telepon</a><a class="b g" target="_blank" rel="noopener" data-wa="'+x.phone+'" data-n="'+esc(x.name)+'" data-a="'+esc(x.addr||'')+'" href="https://wa.me/'+x.phone+'?text='+encodeURIComponent(msg(x))+'">💬 WhatsApp</a>';else h+='<span class="hint">Tidak ada no. HP</span>';return h+'<button class="g" data-c="'+esc(k)+'">'+(state.conf[k]?'✔ Alamat terkonfirmasi':'Tandai alamat OK')+'</button>'}
-function mapSvg(path,s){if(!path.length)return'';const pts=(s?[s]:[]).concat(path);
+function mapSvg(path,s,h){if(!path.length)return'';const pts=(s?[s]:[]).concat(path).concat(h?[h]:[]);
 const la=pts.map(p=>p.lat),ln=pts.map(p=>p.lng),k=Math.cos(la[0]*Math.PI/180);
 const minx=Math.min(...ln)*k,maxx=Math.max(...ln)*k,miny=Math.min(...la),maxy=Math.max(...la);
 const W=320,H=240,pd=22,sc=Math.min((W-2*pd)/((maxx-minx)||1e-6),(H-2*pd)/((maxy-miny)||1e-6));
@@ -541,21 +546,23 @@ const Y=p=>(H-pd-(p.lat-miny)*sc-((H-2*pd)-(maxy-miny)*sc)/2).toFixed(1);
 let g='<svg viewBox="0 0 320 240" style="width:100%;background:var(--bg);border-radius:10px;border:1px solid var(--bd);margin-bottom:6px"><polyline points="'+pts.map(p=>X(p)+','+Y(p)).join(' ')+'" fill="none" stroke="var(--pri)" stroke-width="1.5" stroke-dasharray="4 3"/>';
 if(s)g+='<rect x="'+(X(s)-7)+'" y="'+(Y(s)-7)+'" width="14" height="14" rx="3" fill="var(--tx)"/>';
 path.forEach((p,i)=>{g+='<circle cx="'+X(p)+'" cy="'+Y(p)+'" r="9" fill="var(--pri)"/><text x="'+X(p)+'" y="'+(+Y(p)+3.5)+'" text-anchor="middle" font-size="10" font-weight="700" fill="var(--pri-tx)">'+(i+1)+'</text>'});
-window.__proj={X:X,Y:Y};return g+'<circle id="livedot" r="7" fill="#2563eb" stroke="#fff" stroke-width="2.5" style="display:none"><animate attributeName="r" values="7;10;7" dur="1.6s" repeatCount="indefinite"/></circle></svg><div class="hint" style="margin:0 0 8px">Denah sebaran titik (tanpa jalan), utara di atas. ■ = titik awal, ● biru = posisi Anda (mode GPS).</div>'}
+if(h)g+='<text x="'+X(h)+'" y="'+(+Y(h)+6)+'" font-size="18" text-anchor="middle">🏠</text>';window.__proj={X:X,Y:Y};return g+'<circle id="livedot" r="7" fill="#2563eb" stroke="#fff" stroke-width="2.5" style="display:none"><animate attributeName="r" values="7;10;7" dur="1.6s" repeatCount="indefinite"/></circle></svg><div class="hint" style="margin:0 0 8px">Denah sebaran titik (tanpa jalan), utara di atas. ■ = titik awal, ● biru = posisi Anda (mode GPS). 🏠 = rumah.</div>'}
 const q=x=>x.ok?x.lat+','+x.lng:encodeURIComponent(x.addr||x.name);
 let state={path:[],bad:[],s:null,done:{},dt:{},conf:{}};
 function render(){saveState();updUI();$('out').classList.remove('anim');
 const {path,bad,s}=state;let tot=0,p=s,rows='';
-path.forEach((x,i)=>{const d=p?hav(p,x):0;tot+=d;p=x;x.d=d;x.cum=tot});
-let html='<div class="card"><div class="chips"><span class="chip"><b data-cu="'+path.length+'">'+path.length+'</b> tujuan</span><span class="chip"><b data-cu="'+tot.toFixed(1)+'" data-d="1">'+tot.toFixed(1)+'</b> km (perkiraan)</span><span class="chip ok"><b>'+path.filter((x,i)=>state.done[x.name+i]).length+'</b> selesai</span></div>'+mapSvg(path,s)+'<div class="row"><button id="doneall" style="flex:2;padding:14px;font-size:16px">✓ Selesai semua</button><button class="g" id="undoall" style="flex:1;padding:14px">↩ Reset</button></div><div class="hint" style="margin-top:6px">💡 Geser kartu pasien ke kanan untuk menandai selesai.</div>';
+path.forEach((x,i)=>{const d=p?hav(p,x):0;tot+=d;p=x;x.d=d;x.cum=tot});const hl=(state.h&&path.length)?hav(path[path.length-1],state.h):0;
+let html='<div class="card"><div class="chips"><span class="chip"><b data-cu="'+path.length+'">'+path.length+'</b> tujuan</span><span class="chip"><b data-cu="'+tot.toFixed(1)+'" data-d="1">'+tot.toFixed(1)+'</b> km antar</span>'+(state.h?'<span class="chip"><b>'+hl.toFixed(1)+'</b> km pulang</span><span class="chip"><b>'+(tot+hl).toFixed(1)+'</b> km total</span>':'')+'<span class="chip ok"><b>'+path.filter((x,i)=>state.done[x.name+i]).length+'</b> selesai</span></div>'+mapSvg(path,s,state.h)+'<div class="row"><button id="doneall" style="flex:2;padding:14px;font-size:16px">✓ Selesai semua</button><button class="g" id="undoall" style="flex:1;padding:14px">↩ Reset</button></div><div class="hint" style="margin-top:6px">💡 Geser kartu pasien ke kanan untuk menandai selesai.</div>';
 path.forEach((x,i)=>{const k=x.name+i;
 html+='<div class="stop'+(state.done[k]?' done':'')+(state.pop===k?' flash':'')+'"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(x.name)+'</div><div class="ad">'+esc(x.addr)+'</div><div class="dist">+'+x.d.toFixed(1)+' km dari sebelumnya · total '+x.cum.toFixed(1)+' km</div>'+(state.done[k]?'<div class="dist'+(state.pop===k?' pop':'')+'">✔ Selesai pukul '+(state.dt[k]||'')+'</div>':'')
 +'<div class="row"><a class="b" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+q(x)+'">Navigasi</a><button class="g" data-k="'+esc(k)+'">'+(state.done[k]?'Batal':'✓ Selesai')+'</button></div><div class="row">'+contact(x,k)+'</div></div></div>'});
+if(state.h&&path.length)html+='<div class="stop home"><div class="no">🏠</div><div style="flex:1"><div class="nm">Pulang ke rumah</div><div class="dist">+'+hl.toFixed(1)+' km dari pasien terakhir · total '+(tot+hl).toFixed(1)+' km</div><div class="row"><a class="b" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+state.h.lat+','+state.h.lng+'">🧭 Navigasi pulang</a></div></div></div>';
 html+='</div>';
 if(path.length){html+='<div class="card"><label>Buka seluruh rute di Google Maps</label><div class="hint">Google Maps membatasi 9 titik per rute, jadi dibagi per kelompok.</div><div class="row">';
-for(let i=0;i<path.length;i+=9){const g=path.slice(i,i+9),dest=g[g.length-1],w=g.slice(0,-1).map(q).join('%7C');
-const o=i===0?(s?s.lat+','+s.lng:''):q(path[i-1]);
-html+='<a class="b g" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&travelmode=driving'+(o?'&origin='+o:'')+'&destination='+q(dest)+(w?'&waypoints='+w:'')+'">Stop '+(i+1)+'–'+(i+g.length)+'</a>'}
+const P2=state.h?path.concat([{ok:true,lat:state.h.lat,lng:state.h.lng,home:1}]):path;
+for(let i=0;i<P2.length;i+=9){const g=P2.slice(i,i+9),dest=g[g.length-1],w=g.slice(0,-1).map(q).join('%7C');
+const o=i===0?(s?s.lat+','+s.lng:''):q(P2[i-1]),np=g.filter(z=>!z.home).length,hh=g.some(z=>z.home);
+html+='<a class="b g" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&travelmode=driving'+(o?'&origin='+o:'')+'&destination='+q(dest)+(w?'&waypoints='+w:'')+'">'+(np?'Stop '+(i+1)+(np>1?'–'+(i+np):'')+(hh?' + 🏠':''):'🏠 Rute pulang')+'</a>'}
 html+='</div></div>'}
 if(bad.length)html+='<div class="card"><div class="warn">⚠ '+bad.length+' pasien tanpa lokasi, tidak ikut disusun urutannya (tetap bisa dicari lewat alamat):</div>'+bad.map((x,i)=>'<div class="stop"><div class="no">?</div><div style="flex:1"><div class="nm">'+esc(x.name)+'</div><div class="ad">'+esc(x.addr)+'</div><div class="row"><a class="b g" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination='+q(x)+'">Cari di Maps</a></div><div class="row">'+contact(x,x.name+'b'+i)+'</div></div></div>').join('')+'</div>';
 $('out').innerHTML=html;try{liveDot()}catch(e){}bindAll();
@@ -565,10 +572,10 @@ function esc(t){return String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','
 const mode=()=>document.querySelector('input[name=sm]:checked').value;
 function showMode(){const g=mode()==='gps';$('rsbox').style.display=g?'none':'block';$('gpsbox').style.display=g?'block':'none'}
 document.querySelectorAll('input[name=sm]').forEach(r=>r.onchange=()=>{showMode();save()});
-function save(){try{localStorage.setItem('rao2',JSON.stringify({p:pts,s:$('start').value,t:$('tpl').value,m:mode()}))}catch(e){}}
-function run(s){const all=parse(),good=all.filter(x=>x.ok),bad=all.filter(x=>!x.ok);
+function save(){try{localStorage.setItem('rao2',JSON.stringify({p:pts,s:$('start').value,t:$('tpl').value,m:mode(),h:$('home').value,hu:$('homeuse').checked}))}catch(e){}}
+function run(s){const all=parse(),good=all.filter(x=>x.ok),bad=all.filter(x=>!x.ok),hm=homeCoord();
 if(!good.length){$('out').innerHTML='<div class="card warn">Belum ada pasien yang lokasinya diisi. Tambahkan lokasi dari Google Maps dulu.</div>';return}
-state={path:order(good,s||good[0]),bad,s,done:{},dt:{},conf:{}};
+state={path:order(good,s||good[0],hm),bad,s,h:hm,done:{},dt:{},conf:{}};
 state.at={d:dkey(new Date()),t:tm(new Date())};render();animOut();toast('Rute tersusun: '+state.path.length+' tujuan ✓');logRoute(state.path.length,state.path.length?state.path[state.path.length-1].cum:0);$('out').scrollIntoView({behavior:'smooth'})}
 $('go').onclick=()=>{save();
 if(mode()==='rs'){const s=coord($('start').value);if(!s&&!confirm('Lokasi RS belum diisi. Rute akan dimulai dari pasien pertama. Lanjut?'))return;run(s);return}
@@ -592,7 +599,7 @@ $('ex').onclick=()=>{const L=[['Bu Sari','Jl. Kaliurang Km 5, Caturtunggal',-7.7
 pts=L.map((a,i)=>({name:a[0],addr:a[1]+', Sleman',lat:a[2],lng:a[3],ok:true,phone:ph('0812340'+(1001+i))}));
 if(!$('start').value)$('start').value='-7.7686,110.3733';save();drawList()};
 $('clr').onclick=()=>{if(pts.length&&!confirm('Hapus semua data pasien?'))return;pts=[];$('out').innerHTML='';state={path:[],bad:[],s:null,done:{},dt:{},conf:{}};try{localStorage.removeItem('rao-route')}catch(e){}save();drawList()};
-try{const d=JSON.parse(localStorage.getItem('rao2')||'null');if(d){pts=d.p||[];$('start').value=d.s||'';$('tpl').value=(d.t&&!/^Selamat siang \{nama\}, kami kurir obat/.test(d.t))?d.t:DEF;if(d.m==='gps')document.querySelector('input[name=sm][value=gps]').checked=true}}catch(e){}
+try{const d=JSON.parse(localStorage.getItem('rao2')||'null');if(d){pts=d.p||[];$('start').value=d.s||'';$('home').value=d.h||'';$('homeuse').checked=d.hu!==false;$('tpl').value=(d.t&&!/^Selamat siang \{nama\}, kami kurir obat/.test(d.t))?d.t:DEF;if(d.m==='gps')document.querySelector('input[name=sm][value=gps]').checked=true}}catch(e){}
 showMode();
 drawList();
 if(!$('tpl').value)$('tpl').value=DEF;$('tpl').onchange=save;
@@ -795,7 +802,7 @@ function dNext(){const p=state.path||[];for(let i=0;i<p.length;i++)if(!state.don
 function dDraw(){const p=state.path||[],tot=p.length,dn=p.filter((x,i)=>state.done[x.name+i]).length,n=dNext();
 $('dprog').textContent=tot?dn+' dari '+tot+' selesai':'Belum ada rute';
 if(!tot){$('dnext').innerHTML='<div class="dh" style="font-size:15px">Susun rute dulu di halaman utama, lalu buka Mode berkendara.</div>';return}
-if(!n){$('dnext').innerHTML='<div style="font-size:22px;font-weight:700;text-align:center;padding:10px">🎉 Semua pasien selesai</div>';return}
+if(!n){$('dnext').innerHTML='<div style="font-size:22px;font-weight:700;text-align:center;padding:6px">🎉 Semua pasien selesai</div>'+(state.h?'<div class="dh" style="text-align:center">PULANG KE RUMAH</div><div id="ddist" style="font-size:18px;font-weight:700;color:#7ee0cf;text-align:center;margin:4px 0"></div><div class="dact"><a class="b" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+state.h.lat+','+state.h.lng+'">🏠 Navigasi pulang</a></div>':'');dDist();return}
 const x=n.x;
 $('dnext').innerHTML='<div class="dh">TUJUAN BERIKUTNYA ('+(dn+1)+' dari '+tot+')</div><div style="font-size:22px;font-weight:700">'+esc(x.name)+'</div><div class="dh" style="font-size:14px">'+esc(x.addr)+'</div><div id="ddist" style="font-size:18px;font-weight:700;color:#7ee0cf;margin-top:4px"></div>'
 +'<div class="dact"><a class="b" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+q(x)+'">🧭 Navigasi</a>'
@@ -804,7 +811,7 @@ $('dnext').innerHTML='<div class="dh">TUJUAN BERIKUTNYA ('+(dn+1)+' dari '+tot+'
 dDist();
 let armed=0;$('ddone').onclick=()=>{if(!armed){armed=1;$('ddone').textContent='Ketuk lagi untuk konfirmasi';setTimeout(()=>{armed=0;const b=$('ddone');if(b)b.textContent='✓ Selesai antar'},3000);return}
 const k=x.name+n.i;state.done[k]=true;logDone(k,true,x);render();try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}if(allDone())celebrate(state.path.length);dDraw()}}
-function dDist(){const e=$('ddist'),n=dNext();if(!e||!n)return;e.textContent=DLAST?'≈ '+hav(DLAST,n.x).toFixed(1)+' km (perkiraan jalan)':'Jarak: menunggu GPS'}
+function dDist(){const e=$('ddist'),n=dNext();if(!e)return;if(!n){if(state.h)e.textContent=DLAST?'≈ '+hav(DLAST,state.h).toFixed(1)+' km ke rumah (perkiraan jalan)':'Jarak: menunggu GPS';return}e.textContent=DLAST?'≈ '+hav(DLAST,n.x).toFixed(1)+' km (perkiraan jalan)':'Jarak: menunggu GPS'}
 function beep(){try{DAC=DAC||new (window.AudioContext||window.webkitAudioContext)();const o=DAC.createOscillator(),g=DAC.createGain();o.type='square';o.frequency.value=880;g.gain.value=0.08;o.connect(g);g.connect(DAC.destination);o.start();o.stop(DAC.currentTime+0.18)}catch(e){}}
 function dUI(){const lim=SET.dlim||50,s=DSPD||0;$('dspd').textContent=DSPD==null?'--':DSPD;
 const sc=Math.max(80,lim*1.5),fr=Math.min(1,s/sc),col=s>lim?'#ff5a5a':s>lim*0.85?'#ffb020':'#2bb59d';
@@ -1233,6 +1240,18 @@ dlFile(name,u,XMIME);toast('Berbagi file tidak didukung di sini, Excel diunduh')
 $('r2cp').onclick=()=>{const per=r2Guard();if(per)copyText(r2Text(per),'Rekap 2 minggu disalin ✓')};
 $('r2tb').onclick=()=>{const per=r2Guard();if(per)copyText(r2Table(per).map(r=>r.map(v=>String(v).replace(/[\t\n\r]+/g,' ')).join('\t')).join('\n'),'Tabel disalin. Tempel di Excel ✓')};
 drawR2();
+
+/* ===== Rumah / rute pulang ===== */
+function homeCoord(){const t=($('home').value||'').trim();if(!t||!$('homeuse').checked)return null;return coord(t)}
+function homeSt(){const t=($('home').value||'').trim(),e=$('homest');if(!t){e.textContent='Isi koordinat rumah agar perjalanan pulang ikut diperhitungkan.';return}
+const c=coord(t);e.innerHTML=c?'🧭 '+fc(c)+' · <a href="'+mapsUrl(c)+'" target="_blank" rel="noopener" style="color:var(--pri)">Cek di Maps</a>'+($('homeuse').checked?'':' · tidak dipakai di rute'):'<span style="color:#c0392b">⚠ Lokasi tidak terbaca. Tempel angka koordinat atau link Google Maps yang panjang.</span>'}
+$('home').addEventListener('input',homeSt);$('home').addEventListener('change',save);
+$('homeuse').addEventListener('change',()=>{homeSt();save()});
+$('homegps').onclick=()=>{if(!navigator.geolocation||SET.gps===false){toast(SET.gps===false?'GPS dimatikan di Pengaturan':'GPS tidak tersedia, isi koordinat manual');return}
+const b=$('homegps'),t=b.textContent;b.textContent='Mencari sinyal GPS...';
+freshFix(p=>{b.textContent='Mencari... ±'+Math.round(p.coords.accuracy)+' m'}).then(p=>{b.textContent=t;$('home').value=p.coords.latitude.toFixed(6)+','+p.coords.longitude.toFixed(6);homeSt();save();toast('Lokasi rumah tersimpan (akurasi ±'+Math.round(p.coords.accuracy)+' m)'+(p.coords.accuracy>100?'. Akurasi masih rendah, coba lagi di tempat terbuka':''))},
+e=>{b.textContent=t;toast(e&&e.code===1?'Izin lokasi ditolak. Isi koordinat manual':'Lokasi belum bisa dibaca, coba di tempat terbuka')})};
+homeSt();
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
