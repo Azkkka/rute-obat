@@ -415,6 +415,12 @@ button:active,a.b:active{transform:scale(.97)}
 <div id="plist"></div>
 <div class="row"><button class="big" id="go">Susun Rute Terdekat</button></div>
 <div class="row"><button class="big g" id="drv">🏍️ Mode berkendara (speedometer)</button></div>
+<details id="bdd" style="margin-top:10px"><summary id="bdt" style="cursor:pointer;font-weight:700;font-size:14px">📅 Catat pengantaran untuk tanggal lain (opsional)</summary>
+<div class="hint" style="margin-top:6px">Pakai bila pengantaran terjadi di hari lain dan baru dicatat sekarang. Berlaku untuk tombol ✓ Selesai berikutnya. Pengaturan ini tidak tersimpan: setelah aplikasi dibuka ulang, pencatatan kembali ke hari ini.</div>
+<label style="font-weight:500;margin-top:8px;display:block">Tanggal pengantaran</label><input type="date" id="bdate">
+<label style="font-weight:500;margin-top:8px;display:block">Jam selesai (opsional)</label><input type="time" id="btime">
+<div class="row"><button class="g" id="bdclr">Kembali ke hari ini</button></div></details>
+<div id="bdw"></div>
 <div class="row"><button class="g" id="ex">Isi contoh</button><button class="g" id="clr">Hapus semua</button></div>
 <details style="margin-top:10px"><summary class="hint" style="cursor:pointer">Tempel banyak sekaligus (opsional)</summary>
 <textarea id="list" placeholder="Satu baris = satu pasien, pisahkan dengan tanda |&#10;Nama | Alamat | Lokasi | No. HP&#10;Bu Sari | Jl. Mawar 3 | -7.4711,110.2250 | 0812xxxxxxx"></textarea>
@@ -432,6 +438,16 @@ button:active,a.b:active{transform:scale(.97)}
 <label>📒 Rekap harian (catatan)</label>
 <input type="date" id="rd" style="margin-bottom:8px">
 <div id="rsum"></div>
+<div id="rmv" class="icw" style="display:none;margin-top:10px">
+<div id="mvbox" style="display:none"><b>📅 Pindahkan <span id="mvn">0</span> pasien terpilih</b>
+<label style="font-weight:500;margin-top:8px;display:block">Pindah ke tanggal</label><input type="date" id="mvd">
+<label style="font-weight:500;margin-top:8px;display:block">Jam selesai</label>
+<select id="mvt"><option value="keep">Tetap seperti semula</option><option value="set">Atur jam sendiri</option></select>
+<input type="time" id="mvtm" style="display:none;margin-top:6px">
+<div class="row"><button class="big" id="mvgo" disabled>Pindahkan</button><button class="g" id="mvclr">Batal pilih</button></div>
+<div class="hint">Rekap, rekap 2 minggu, dan perkiraan pendapatan otomatis mengikuti tanggal baru. Tanggal tujuan awalnya hari kerja sebelumnya.</div></div>
+<div class="row"><button class="g" id="mvundo" style="display:none">↩ Batalkan pemindahan terakhir</button></div>
+</div>
 <div class="row"><button class="g" id="rcopy">Salin rekap</button><button class="g" id="rdel">Hapus rekap tanggal ini</button></div>
 <div class="hint">Rekap mencatat pasien yang Anda tandai ✓ Selesai, lengkap dengan jam sampai detik. Tersimpan di HP dan tidak ikut terhapus saat "Hapus semua" pasien.</div>
 <div id="rhist" style="margin-top:8px"></div>
@@ -617,19 +633,22 @@ function saveLog(){try{localStorage.setItem('rao3-log',JSON.stringify(LOG))}catc
 const dayOf=k=>LOG[k]||(LOG[k]={rute:[],sel:[]});
 const ekey=(d,x)=>d+'|'+x.name+'|'+x.addr;
 function logRoute(n,km){const now=new Date();dayOf(dkey(now)).rute.push({t:tm(now),n:n,km:+(km||0).toFixed(1)});saveLog();drawRekap()}
-function logDone(k,on,x){const now=new Date(),d=dkey(now),D=dayOf(d),id=ekey(d,x),had=D.sel.some(e=>e.k===id);D.sel=D.sel.filter(e=>e.k!==id);
-if(on){state.dt[k]=tm(now);D.sel.push({k:id,name:x.name,addr:x.addr,phone:x.phone||'',lat:x.ok?x.lat:null,lng:x.ok?x.lng:null,t:state.dt[k],c:!!state.conf[k]});bookUpsert(x,!had)}
-else{delete state.dt[k];if(had)bookDec(x)}
+function bdate(){const e=$('bdate'),v=e?e.value:'',t=dkey(new Date());return v&&v<t?v:''}
+function logDone(k,on,x){const now=new Date(),dd=state.dd=state.dd||{},d=on?(bdate()||dkey(now)):(dd[k]||dkey(now)),D=dayOf(d),id=ekey(d,x),had=D.sel.some(e=>e.k===id);D.sel=D.sel.filter(e=>e.k!==id);
+if(on){const bv=bdate()?$('btime').value:'',bt=bv?(bv.length===5?bv+':00':bv):'';state.dt[k]=bt||tm(now);dd[k]=d;
+D.sel.push({k:id,name:x.name,addr:x.addr,phone:x.phone||'',lat:x.ok?x.lat:null,lng:x.ok?x.lng:null,t:state.dt[k],c:!!state.conf[k]});bookUpsert(x,!had);if(d!==dkey(now))toast('Dicatat untuk '+fmtTgl(d))}
+else{delete state.dt[k];delete dd[k];if(had)bookDec(x)}
 saveLog();drawRekap()}
 function logConf(x,v){const d=dkey(new Date()),e=(LOG[d]?LOG[d].sel:[]).find(e=>e.k===ekey(d,x));if(e){e.c=!!v;saveLog();drawRekap()}}
 function rekapData(){const k=$('rd').value||dkey(new Date()),D=LOG[k]||{rute:[],sel:[]};
 return {k:k,D:D,sel:D.sel.slice().sort((a,b)=>a.t<b.t?-1:a.t>b.t?1:0)}}
-function drawRekap(){const r=rekapData(),D=r.D,sel=r.sel,conf=sel.filter(e=>e.c).length,lr=D.rute[D.rute.length-1];
+function drawRekap(){const r=rekapData();if(window.RSD!==r.k){window.RSD=r.k;if(window.RSELK)window.RSELK.clear()}const D=r.D,sel=r.sel,conf=sel.filter(e=>e.c).length,lr=D.rute[D.rute.length-1];
 let h='<div class="sum">'+fmtTgl(r.k)+'</div><div style="font-size:14px;margin-bottom:6px">Sudah diantar: <b>'+sel.length+'</b>'+(lr?' dari '+lr.n+' pasien':'')+' · Alamat terkonfirmasi: <b>'+conf+'</b></div>';
 if(sel.length)h+='<div class="ad">Pengantaran pertama '+sel[0].t+' · terakhir '+sel[sel.length-1].t+'</div>';
 D.rute.forEach(x=>{h+='<div class="ad">Rute disusun pukul '+x.t+' ('+x.n+' pasien, ≈ '+x.km+' km)</div>'});
-h+=sel.map((e,i)=>'<div class="stop"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(e.name)+'</div><div class="ad">📍 '+esc(e.addr||'(alamat tidak tercatat)')+'</div>'+(rp(e)?'<div class="ad">📞 '+esc(lp(rp(e)))+'</div>':'')+(rc(e)?'<div class="ad">🧭 '+fc(rc(e))+' · <a href="'+mapsUrl(rc(e))+'" target="_blank" rel="noopener" style="color:var(--pri)">Buka di Maps</a></div>':'')+'<div class="dist">Selesai pukul '+e.t+(e.c?' · alamat terkonfirmasi':'')+'</div><div class="row" style="margin-top:6px"><button class="g" data-ra="'+i+'" style="padding:7px 12px;font-size:13px">➕ Antar lagi</button></div></div></div>').join('')||'<div class="hint">Belum ada pengantaran tercatat pada tanggal ini.</div>';
-$('rsum').innerHTML=h;try{drawInc()}catch(e){}try{drawR2()}catch(e){}window.RSEL=sel;document.querySelectorAll('[data-ra]').forEach(b=>{b.onclick=()=>addFromEntry(window.RSEL[+b.dataset.ra])});
+if(sel.length)h+='<div class="row" style="margin:6px 0"><button class="g" data-rsall="1" style="padding:6px 12px;font-size:13px">☑ Pilih semua untuk dipindahkan</button></div>';
+h+=sel.map((e,i)=>'<div class="stop"><input type="checkbox" class="rsel" data-rs="'+esc(e.k)+'" '+((window.RSELK&&window.RSELK.has(e.k))?'checked ':'')+'style="width:22px;height:22px;flex:none;margin-top:4px"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(e.name)+'</div><div class="ad">📍 '+esc(e.addr||'(alamat tidak tercatat)')+'</div>'+(rp(e)?'<div class="ad">📞 '+esc(lp(rp(e)))+'</div>':'')+(rc(e)?'<div class="ad">🧭 '+fc(rc(e))+' · <a href="'+mapsUrl(rc(e))+'" target="_blank" rel="noopener" style="color:var(--pri)">Buka di Maps</a></div>':'')+'<div class="dist">Selesai pukul '+e.t+(e.c?' · alamat terkonfirmasi':'')+'</div><div class="row" style="margin-top:6px"><button class="g" data-ra="'+i+'" style="padding:7px 12px;font-size:13px">➕ Antar lagi</button><button class="g" data-mv="'+esc(e.k)+'" style="padding:7px 12px;font-size:13px">📅 Pindah tanggal</button></div></div></div>').join('')||'<div class="hint">Belum ada pengantaran tercatat pada tanggal ini.</div>';
+$('rsum').innerHTML=h;try{drawInc()}catch(e){}try{drawR2()}catch(e){}try{updMv()}catch(e){}window.RSEL=sel;document.querySelectorAll('[data-ra]').forEach(b=>{b.onclick=()=>addFromEntry(window.RSEL[+b.dataset.ra])});
 const ks=Object.keys(LOG).filter(k=>LOG[k].sel.length||LOG[k].rute.length).sort().reverse().slice(0,30);
 $('rhist').innerHTML=ks.length?'<div class="hint">Riwayat tanggal (tekan untuk membuka):</div><div class="row">'+ks.map(k=>'<button class="g" data-d="'+k+'">'+k.slice(8)+'/'+k.slice(5,7)+' ('+LOG[k].sel.length+')</button>').join('')+'</div>':'';
 document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{$('rd').value=b.dataset.d;drawRekap()})}
@@ -1252,6 +1271,52 @@ const b=$('homegps'),t=b.textContent;b.textContent='Mencari sinyal GPS...';
 freshFix(p=>{b.textContent='Mencari... ±'+Math.round(p.coords.accuracy)+' m'}).then(p=>{b.textContent=t;$('home').value=p.coords.latitude.toFixed(6)+','+p.coords.longitude.toFixed(6);homeSt();save();toast('Lokasi rumah tersimpan (akurasi ±'+Math.round(p.coords.accuracy)+' m)'+(p.coords.accuracy>100?'. Akurasi masih rendah, coba lagi di tempat terbuka':''))},
 e=>{b.textContent=t;toast(e&&e.code===1?'Izin lokasi ditolak. Isi koordinat manual':'Lokasi belum bisa dibaca, coba di tempat terbuka')})};
 homeSt();
+
+/* ===== Pindah tanggal rekap + catat untuk tanggal lain ===== */
+var RSELK=new Set(),LASTMOVE=null;
+try{LASTMOVE=JSON.parse(localStorage.getItem('rao-lastmove')||'null')}catch(e){LASTMOVE=null}
+function prevWork(d){if(!INC)incLoad();let x=icA(icP(d),-1),n=0;while(INC.off.includes(x.getDay())&&n++<7)x=icA(x,-1);return dkey(x)}
+function updMv(){const n=RSELK.size,el=$('rmv');if(!el)return;
+el.style.display=(n||LASTMOVE)?'block':'none';$('mvbox').style.display=n?'block':'none';$('mvn').textContent=n;$('mvgo').disabled=!n;
+const u=$('mvundo');u.style.display=LASTMOVE?'inline-block':'none';
+if(LASTMOVE)u.textContent='↩ Batalkan pemindahan terakhir ('+LASTMOVE.items.length+' pasien: '+icS(icP(LASTMOVE.src))+' → '+icS(icP(LASTMOVE.dest))+')';
+if(n&&!$('mvd').dataset.u&&$('rd').value)$('mvd').value=prevWork($('rd').value);
+$('mvd').max=dkey(new Date())}
+function selDom(keys){document.querySelectorAll('.rsel').forEach(c=>{c.checked=keys.has(c.dataset.rs)})}
+$('rsum').addEventListener('change',e=>{const c=e.target.closest('.rsel');if(!c)return;c.checked?RSELK.add(c.dataset.rs):RSELK.delete(c.dataset.rs);updMv()});
+$('rsum').addEventListener('click',e=>{
+if(e.target.closest('[data-rsall]')){(window.RSEL||[]).forEach(x=>RSELK.add(x.k));selDom(RSELK);updMv();return}
+const m=e.target.closest('[data-mv]');if(m){RSELK.clear();RSELK.add(m.dataset.mv);selDom(RSELK);updMv();$('rmv').scrollIntoView({behavior:'smooth',block:'center'})}});
+$('mvd').addEventListener('change',()=>{$('mvd').dataset.u='1'});
+$('mvt').onchange=()=>{$('mvtm').style.display=$('mvt').value==='set'?'block':'none'};
+$('mvclr').onclick=()=>{RSELK.clear();selDom(RSELK);$('mvd').dataset.u='';updMv()};
+function doMove(){const src=$('rd').value,dest=$('mvd').value;
+if(!dest){toast('Pilih tanggal tujuan dulu');return}if(dest===src){toast('Tanggal tujuan sama dengan tanggal rekap ini');return}
+if(dest>dkey(new Date())){toast('Tanggal tujuan tidak boleh di masa depan');return}
+const S=dayOf(src),Dd=dayOf(dest),moved=[],skipped=[];let tmo='';
+if($('mvt').value==='set'&&$('mvtm').value){const v=$('mvtm').value;tmo=v.length===5?v+':00':v}
+[...RSELK].forEach(k=>{const e=S.sel.find(q=>q.k===k);if(!e)return;const nk=ekey(dest,e);
+if(Dd.sel.some(q=>q.k===nk)){skipped.push(e.name);return}
+moved.push({old:e,neu:Object.assign({},e,{k:nk,t:tmo||e.t})})});
+if(!moved.length){toast(skipped.length?'Dilewati: '+skipped.join(', ')+' sudah ada di tanggal tujuan':'Tidak ada yang dipindahkan');return}
+S.sel=S.sel.filter(q=>!moved.some(m=>m.old.k===q.k));moved.forEach(m=>Dd.sel.push(m.neu));
+state.dd=state.dd||{};(state.path||[]).forEach((x,i)=>{const m=moved.find(z=>z.old.name===x.name&&(z.old.addr||'')===(x.addr||''));if(m){state.dd[x.name+i]=dest;if(tmo&&state.dt)state.dt[x.name+i]=tmo}});
+LASTMOVE={src:src,dest:dest,items:moved,at:Date.now()};try{localStorage.setItem('rao-lastmove',JSON.stringify(LASTMOVE))}catch(e){}
+RSELK.clear();$('mvd').dataset.u='';saveLog();drawRekap();try{if(state.path.length)render()}catch(e){}
+toast(moved.length+' pasien dipindah ke '+fmtTgl(dest)+(skipped.length?' · dilewati '+skipped.length+' (sudah ada di tujuan)':'')+' ✓')}
+function undoMove(){const L=LASTMOVE;if(!L)return;const S=dayOf(L.src),Dd=dayOf(L.dest);
+L.items.forEach(m=>{Dd.sel=Dd.sel.filter(q=>q.k!==m.neu.k);if(!S.sel.some(q=>q.k===m.old.k))S.sel.push(m.old)});
+state.dd=state.dd||{};(state.path||[]).forEach((x,i)=>{const m=L.items.find(z=>z.old.name===x.name&&(z.old.addr||'')===(x.addr||''));if(m){state.dd[x.name+i]=L.src;if(state.dt)state.dt[x.name+i]=m.old.t}});
+LASTMOVE=null;try{localStorage.removeItem('rao-lastmove')}catch(e){}saveLog();drawRekap();try{if(state.path.length)render()}catch(e){}toast('Pemindahan dibatalkan ✓')}
+$('mvgo').onclick=doMove;$('mvundo').onclick=undoMove;
+/* catat untuk tanggal lain */
+function bdUI(){const v=bdate(),w=$('bdw'),t=$('bdt');$('bdate').max=dkey(icA(icP(dkey(new Date())),-1));
+t.textContent=v?'📅 Pencatatan untuk '+icS(icP(v))+' (bukan hari ini)':'📅 Catat pengantaran untuk tanggal lain (opsional)';
+w.innerHTML=v?'<div class="icw" style="margin-top:8px">⚠ Pencatatan memakai tanggal <b>'+esc(fmtTgl(v))+'</b>, bukan hari ini. Tombol ✓ Selesai akan masuk ke rekap tanggal itu. Tekan Kembali ke hari ini bila sudah selesai.</div>':''}
+$('bdate').addEventListener('change',bdUI);$('btime').addEventListener('change',bdUI);
+$('bdclr').onclick=()=>{$('bdate').value='';$('btime').value='';bdUI()};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)bdUI()});
+bdUI();updMv();
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
