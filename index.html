@@ -336,6 +336,8 @@ button:active,a.b:active{transform:scale(.97)}
 <div class="hint" style="margin-top:10px"><b>Layanan lokasi (GPS)</b></div>
 <label style="font-weight:500;display:flex;gap:8px;align-items:center;margin-top:6px"><input type="checkbox" id="gpson" style="width:auto"> Izinkan aplikasi membaca lokasi saya</label>
 <div class="hint" id="gpsst"></div>
+<label style="font-weight:500;display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="autoloc" style="width:auto"> Perbarui lokasi saya otomatis saat aplikasi dibuka</label>
+<div class="hint">Saat aktif, lokasi dibaca ulang setiap aplikasi dibuka atau kembali ke layar, dan titik biru di denah selalu menunjukkan posisi saat ini. Matikan untuk menghemat baterai; lokasi tetap diperbarui bila Anda memakai mode "Dari posisi saya sekarang".</div>
 <div class="hint">Jika dimatikan, aplikasi berhenti memakai GPS dan hanya bisa mulai dari RS. Halaman web tidak bisa mematikan layanan lokasi HP atau mencabut izin browser. Untuk mencabutnya: ketuk ikon gembok di kolom alamat browser &gt; Izin &gt; Lokasi &gt; Blokir, atau matikan Lokasi di pengaturan HP.</div>
 </div>
 <div class="pane" data-p="loading">
@@ -368,6 +370,7 @@ button:active,a.b:active{transform:scale(.97)}
 <div class="card hero">
 <div class="hrow"><div><div id="hi">Halo 👋</div><div id="tgl">&nbsp;</div></div><div id="jam">--:--:--</div></div>
 <div class="hbar"><i id="hbar"></i></div><div id="hprog">Belum ada rute. Tambah pasien lalu susun rute.</div>
+<div id="locst" title="Ketuk untuk menyegarkan lokasi" style="font-size:12px;opacity:.93;margin-top:4px;position:relative;z-index:1;cursor:pointer">📡 Mencari lokasi saat ini…</div>
 </div>
 
 <div class="card">
@@ -568,17 +571,17 @@ let state={path:[],bad:[],s:null,done:{},dt:{},conf:{}};
 function render(){saveState();updUI();$('out').classList.remove('anim');
 const {path,bad,s}=state;let tot=0,p=s,rows='';
 path.forEach((x,i)=>{const d=p?hav(p,x):0;tot+=d;p=x;x.d=d;x.cum=tot});const hl=(state.h&&path.length)?hav(path[path.length-1],state.h):0;
-let html='<div class="card"><div class="chips"><span class="chip"><b data-cu="'+path.length+'">'+path.length+'</b> tujuan</span><span class="chip"><b data-cu="'+tot.toFixed(1)+'" data-d="1">'+tot.toFixed(1)+'</b> km antar</span>'+(state.h?'<span class="chip"><b>'+hl.toFixed(1)+'</b> km pulang</span><span class="chip"><b>'+(tot+hl).toFixed(1)+'</b> km total</span>':'')+'<span class="chip ok"><b>'+path.filter((x,i)=>state.done[x.name+i]).length+'</b> selesai</span></div>'+mapSvg(path,s,state.h)+'<div class="row"><button id="doneall" style="flex:2;padding:14px;font-size:16px">✓ Selesai semua</button><button class="g" id="undoall" style="flex:1;padding:14px">↩ Reset</button></div><div class="hint" style="margin-top:6px">💡 Geser kartu pasien ke kanan untuk menandai selesai.</div>';
+let html='<div class="card"><div class="chips"><span class="chip"><b data-cu="'+path.length+'">'+path.length+'</b> tujuan</span><span class="chip"><b data-cu="'+tot.toFixed(1)+'" data-d="1">'+tot.toFixed(1)+'</b> km antar</span>'+(state.h?'<span class="chip"><b>'+hl.toFixed(1)+'</b> km pulang</span><span class="chip"><b>'+(tot+hl).toFixed(1)+'</b> km total</span>':'')+'<span class="chip ok"><b>'+path.filter((x,i)=>state.done[x.name+i]).length+'</b> selesai</span></div>'+mapSvg(path,s,state.h)+'<div class="row"><button id="doneall" style="flex:2;padding:14px;font-size:16px">✓ Selesai semua</button><button class="g" id="undoall" style="flex:1;padding:14px">↩ Reset</button></div><div class="row"><button class="g" id="resort" style="width:100%;padding:12px">↻ Urutkan ulang sisa rute dari lokasi saya</button></div><div class="hint" style="margin-top:6px">💡 Geser kartu pasien ke kanan untuk menandai selesai.</div>';
 path.forEach((x,i)=>{const k=x.name+i;
 html+='<div class="stop'+(state.done[k]?' done':'')+(state.pop===k?' flash':'')+'"><div class="no">'+(i+1)+'</div><div style="flex:1"><div class="nm">'+esc(x.name)+'</div><div class="ad">'+esc(x.addr)+'</div><div class="dist">+'+x.d.toFixed(1)+' km dari sebelumnya · total '+x.cum.toFixed(1)+' km</div>'+(state.done[k]?'<div class="dist'+(state.pop===k?' pop':'')+'">✔ Selesai pukul '+(state.dt[k]||'')+'</div>':'')
 +'<div class="row"><a class="b" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+q(x)+'">Navigasi</a><button class="g" data-k="'+esc(k)+'">'+(state.done[k]?'Batal':'✓ Selesai')+'</button></div><div class="row">'+contact(x,k)+'</div></div></div>'});
 if(state.h&&path.length)html+='<div class="stop home"><div class="no">🏠</div><div style="flex:1"><div class="nm">Pulang ke rumah</div><div class="dist">+'+hl.toFixed(1)+' km dari pasien terakhir · total '+(tot+hl).toFixed(1)+' km</div><div class="row"><a class="b" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+state.h.lat+','+state.h.lng+'">🧭 Navigasi pulang</a></div></div></div>';
 html+='</div>';
-if(path.length){html+='<div class="card"><label>Buka seluruh rute di Google Maps</label><div class="hint">Google Maps membatasi 9 titik per rute, jadi dibagi per kelompok.</div><div class="row">';
-const P2=state.h?path.concat([{ok:true,lat:state.h.lat,lng:state.h.lng,home:1}]):path;
+if(path.length){html+='<div class="card"><label>Buka sisa rute di Google Maps</label><div class="hint">Google Maps membatasi 9 titik per rute, jadi dibagi per kelompok.</div><div class="row">';
+const P2=path.map((x,i)=>({x:x,n:i+1})).filter(o=>!state.done[o.x.name+(o.n-1)]).map(o=>Object.assign({},o.x,{_n:o.n})).concat(state.h?[{ok:true,lat:state.h.lat,lng:state.h.lng,home:1}]:[]);
 for(let i=0;i<P2.length;i+=9){const g=P2.slice(i,i+9),dest=g[g.length-1],w=g.slice(0,-1).map(q).join('%7C');
-const o=i===0?(s?s.lat+','+s.lng:''):q(P2[i-1]),np=g.filter(z=>!z.home).length,hh=g.some(z=>z.home);
-html+='<a class="b g" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&travelmode=driving'+(o?'&origin='+o:'')+'&destination='+q(dest)+(w?'&waypoints='+w:'')+'">'+(np?'Stop '+(i+1)+(np>1?'–'+(i+np):'')+(hh?' + 🏠':''):'🏠 Rute pulang')+'</a>'}
+const o=i===0?(s?s.lat+','+s.lng:''):q(P2[i-1]),pn=g.filter(z=>!z.home),hh=g.some(z=>z.home);
+html+='<a class="b g" target="_blank" rel="noopener"'+(i===0?' data-first="1"':'')+' href="https://www.google.com/maps/dir/?api=1&travelmode=driving'+(o?'&origin='+o:'')+'&destination='+q(dest)+(w?'&waypoints='+w:'')+'">'+(pn.length?'Stop '+pn[0]._n+(pn.length>1?'–'+pn[pn.length-1]._n:'')+(hh?' + 🏠':''):'🏠 Rute pulang')+'</a>'}
 html+='</div></div>'}
 if(bad.length)html+='<div class="card"><div class="warn">⚠ '+bad.length+' pasien tanpa lokasi, tidak ikut disusun urutannya (tetap bisa dicari lewat alamat):</div>'+bad.map((x,i)=>'<div class="stop"><div class="no">?</div><div style="flex:1"><div class="nm">'+esc(x.name)+'</div><div class="ad">'+esc(x.addr)+'</div><div class="row"><a class="b g" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination='+q(x)+'">Cari di Maps</a></div><div class="row">'+contact(x,x.name+'b'+i)+'</div></div></div>').join('')+'</div>';
 $('out').innerHTML=html;try{liveDot()}catch(e){}bindAll();
@@ -683,7 +686,7 @@ r.style.setProperty('--h1',dark?mixc(pri,'#0a1a1f',0.5):pri);
 r.style.setProperty('--h2',dark?mixc(pri,'#0a1a1f',0.8):mixc(pri,'#0b2a6f',0.55));
 try{applyBg()}catch(e){}
 const ti=$('thm');if(ti)ti.textContent={auto:'🌓',light:'☀️',dark:'🌙'}[m];
-document.documentElement.classList.toggle('noanim',SET.anim===false);const an=$('anim');if(an)an.checked=SET.anim!==false;const fxc=$('fxs');if(fxc)fxc.checked=SET.fx!==false;
+document.documentElement.classList.toggle('noanim',SET.anim===false);const an=$('anim');if(an)an.checked=SET.anim!==false;const fxc=$('fxs');if(fxc)fxc.checked=SET.fx!==false;const alc=$('autoloc');if(alc)alc.checked=SET.auto!==false;
 const mt=document.querySelector('meta[name=theme-color]');if(mt)mt.content=pri;
 document.querySelectorAll('.mb').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
 $('pal').innerHTML=PAL.map((c,i)=>'<button data-c="'+i+'" aria-label="'+c[0]+'" title="'+c[0]+'" style="width:38px;height:38px;border-radius:50%;padding:0;background:'+(dark?c[2]:c[1])+';border:3px solid '+((SET.color||0)===i?'var(--tx)':'transparent')+'"></button>').join('');
@@ -872,19 +875,20 @@ t1=setTimeout(()=>fin(best),20000);t2=setTimeout(()=>{if(best&&best.coords.accur
 id=navigator.geolocation.watchPosition(p=>{if(Date.now()-p.timestamp>30000)return;
 if(!best||p.coords.accuracy<best.coords.accuracy)best=p;if(onProg)onProg(p);if(p.coords.accuracy<=30)fin(p)},
 e=>{if(e.code===1&&!done){stop();no(e)}},{enableHighAccuracy:true,maximumAge:0,timeout:20000})})}
-function liveSt(){const e=$('livest');if(!e)return;
-if(SET.gps===false){e.textContent='GPS dimatikan di Pengaturan.';return}
-if(LERR===1){e.textContent='Izin lokasi ditolak. Izinkan di pengaturan browser.';return}
-if(!LIVE){e.textContent='📡 Mencari sinyal GPS…';return}
-const age=Math.round((Date.now()-LIVE.t)/1000);
-e.innerHTML='📡 <b>Lokasi langsung</b><br>'+LIVE.lat.toFixed(5)+', '+LIVE.lng.toFixed(5)+' · ±'+Math.round(LIVE.acc)+' m<br>diperbarui '+tm(new Date(LIVE.t))+(age>10?' ('+age+' detik lalu)':'')}
-function liveDot(){const d=document.getElementById('livedot');if(!d||!LIVE||!window.__proj)return;
+function liveSt(){const e=$('livest'),h=$('locst');let lg='',sh='';
+if(SET.gps===false){lg='GPS dimatikan di Pengaturan.';sh='📡 GPS dimatikan di Pengaturan'}
+else if(LERR===1){lg='Izin lokasi ditolak. Izinkan di pengaturan browser.';sh='📡 Izin lokasi ditolak'}
+else if(!LIVE){const idle=SET.auto===false&&mode()!=='gps';lg=idle?'Pembaruan otomatis nonaktif.':'📡 Mencari sinyal GPS…';sh=idle?'📡 Lokasi otomatis nonaktif · ketuk untuk memperbarui':'📡 Mencari lokasi saat ini…'}
+else{const age=Math.round((Date.now()-LIVE.t)/1000);lg='📡 <b>Lokasi langsung</b><br>'+LIVE.lat.toFixed(5)+', '+LIVE.lng.toFixed(5)+' · ±'+Math.round(LIVE.acc)+' m<br>diperbarui '+tm(new Date(LIVE.t))+(age>10?' ('+age+' detik lalu)':'');sh='📡 Lokasi saat ini ±'+Math.round(LIVE.acc)+' m · '+tm(new Date(LIVE.t))+(age>20?' ('+age+' dtk lalu)':'')}
+if(e){if(lg.indexOf('<')>=0)e.innerHTML=lg;else e.textContent=lg}
+if(h)h.textContent=sh}
+function liveDot(){const d=document.getElementById('livedot');if(d&&!LIVE){d.style.display='none';return}if(!d||!LIVE||!window.__proj)return;
 const x=+window.__proj.X({lat:LIVE.lat,lng:LIVE.lng}),y=+window.__proj.Y({lat:LIVE.lat,lng:LIVE.lng});
 if(x<-10||x>330||y<-10||y>250){d.style.display='none';return}
 d.setAttribute('cx',x);d.setAttribute('cy',y);d.style.display='block'}
 function liveStop(){if(LWID!=null){try{navigator.geolocation.clearWatch(LWID)}catch(e){}LWID=null}}
-function liveStart(){liveStop();LERR=0;
-if(!navigator.geolocation||SET.gps===false||mode()!=='gps'||document.hidden){liveSt();return}
+function liveStart(force){liveStop();LERR=0;
+if(!navigator.geolocation||SET.gps===false||(force!==true&&SET.auto===false&&mode()!=='gps')||document.hidden){liveSt();return}
 LWID=navigator.geolocation.watchPosition(p=>{if(Date.now()-p.timestamp>30000)return;LERR=0;
 LIVE={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,t:Date.now()};liveSt();liveDot()},
 e=>{LERR=e.code;liveSt()},{enableHighAccuracy:true,maximumAge:0,timeout:30000});liveSt()}
@@ -892,8 +896,8 @@ document.querySelectorAll('input[name=sm]').forEach(r=>r.addEventListener('chang
 $('gpson').addEventListener('change',liveStart);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)liveStop();else{LIVE=null;liveStart()}});
 window.addEventListener('pageshow',e=>{if(e.persisted){LIVE=null;liveStart()}});
-$('lrf').onclick=()=>{LIVE=null;liveStart()};
-setInterval(()=>{if(LIVE&&$('gpsbox').style.display!=='none')liveSt()},5000);
+$('lrf').onclick=()=>{LIVE=null;liveStart(true)};
+setInterval(()=>{if(LIVE)liveSt()},5000);
 liveStart();
 
 /* ===== Modern v2 ===== */
@@ -1178,9 +1182,9 @@ const addr=$('eda').value.trim(),phone=ph($('edp').value),l=$('edl').value.trim(
 if(l&&!c&&!confirm('Lokasi tidak terbaca. Simpan tanpa lokasi?'))return;
 const nx={name:n,addr:addr,phone:phone,lat:c?c.lat:null,lng:c?c.lng:null,ok:!!c},old=ED.old;let moved=false;
 if(ED.kind==='list'){if(pts.some((q,i)=>i!==ED.ref&&bkey(q)===bkey(nx))){toast('Pasien dengan nama dan alamat yang sama sudah ada di daftar');return}
-Object.assign(pts[ED.ref],nx);moved=patchRoute(old,nx);save();drawList();if($('edb').checked)bookReplace(old,nx)}
+const ix0=(state.path||[]).findIndex(q=>q.name===old.name&&(q.addr||'')===old.addr),undone=ix0<0||!state.done[old.name+ix0];Object.assign(pts[ED.ref],nx);moved=patchRoute(old,nx);window.__rs=(nx.ok&&(!old.ok||old.lat!==nx.lat||old.lng!==nx.lng)&&undone&&(state.path||[]).length)?nx:null;save();drawList();if($('edb').checked)bookReplace(old,nx)}
 else bookReplace(old,nx);
-closeEd();toast(moved?'Disimpan. Tekan Susun Rute Terdekat lagi agar urutan mengikuti lokasi baru.':'Perubahan disimpan ✓')}
+closeEd();if(window.__rs){const w=window.__rs;window.__rs=null;if(resortRoute({auto:true})){const nn=state.path.findIndex(q=>bkey(q)===bkey(w))+1;toast('Disimpan. Urutan sisa rute disesuaikan'+(nn?': '+w.name+' sekarang nomor '+nn:'')+' ✓');return}}toast(moved?'Disimpan. Tekan Susun Rute Terdekat lagi agar urutan mengikuti lokasi baru.':'Perubahan disimpan ✓')}
 $('edl').addEventListener('input',edPv);
 $('edsave').onclick=saveEd;$('edcancel').onclick=closeEd;$('edx').onclick=closeEd;$('edbg').onclick=closeEd;
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('edit').classList.contains('open'))closeEd()});
@@ -1317,6 +1321,32 @@ $('bdate').addEventListener('change',bdUI);$('btime').addEventListener('change',
 $('bdclr').onclick=()=>{$('bdate').value='';$('btime').value='';bdUI()};
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)bdUI()});
 bdUI();updMv();
+
+/* ===== Urut ulang sisa rute otomatis + lokasi segar saat dibuka ===== */
+function resortRoute(o){o=o||{};const P=state.path||[];
+if(!P.length){if(o.manual)toast('Susun rute dulu sebelum mengurutkan ulang');return false}
+const items=P.map((x,i)=>({x:x,k:x.name+i})),dn=items.filter(it=>state.done[it.k]),rest=[];
+items.filter(it=>!state.done[it.k]).forEach(it=>{const p=pts.find(q=>bkey(q)===bkey(it.x));if(!p)return;
+const x=Object.assign({},it.x,{name:p.name,addr:p.addr,phone:p.phone});if(p.ok){x.lat=p.lat;x.lng=p.lng;x.ok=true}rest.push({x:x,k:it.k})});
+pts.forEach(p=>{if(p.ok&&!P.some(x=>bkey(x)===bkey(p)))rest.push({x:{name:p.name,addr:p.addr,phone:p.phone,lat:p.lat,lng:p.lng,ok:true},k:null})});
+let origin=null;
+if(LIVE&&Date.now()-LIVE.t<120000)origin={lat:LIVE.lat,lng:LIVE.lng};
+if(!origin){const ld=dn.map(it=>({it:it,t:state.dt[it.k]||''})).sort((a,b)=>a.t<b.t?-1:a.t>b.t?1:0).pop();if(ld&&ld.it.x.ok)origin={lat:ld.it.x.lat,lng:ld.it.x.lng}}
+if(!origin)origin=state.s||(rest[0]&&rest[0].x)||null;
+const kmap=new Map(rest.map(r=>[r.x,r.k])),before=rest.map(r=>bkey(r.x)).join('|');
+const ord=rest.length?order(rest.map(r=>r.x),origin,state.h||null):[];
+const nd={},ndt={},nc={},ndd={};state.dd=state.dd||{};
+dn.forEach((it,j)=>{const nk=it.x.name+j;nd[nk]=true;if(state.dt[it.k]!==undefined)ndt[nk]=state.dt[it.k];if(state.conf[it.k])nc[nk]=state.conf[it.k];if(state.dd[it.k])ndd[nk]=state.dd[it.k]});
+ord.forEach((x,m)=>{const ok=kmap.get(x);if(ok&&state.conf[ok])nc[x.name+(dn.length+m)]=state.conf[ok]});
+state.path=dn.map(it=>it.x).concat(ord);state.bad=pts.filter(p=>!p.ok);state.done=nd;state.dt=ndt;state.conf=nc;state.dd=ndd;
+const changed=ord.map(x=>bkey(x)).join('|')!==before,added=rest.filter(r=>r.k===null).length;
+render();if(o.manual)toast(added?added+' pasien baru disisipkan ke sisa rute ✓':changed?'Sisa rute diurutkan ulang dari lokasi Anda ✓':'Urutan sisa rute sudah yang terdekat ✓');return true}
+$('out').addEventListener('click',e=>{if(e.target.closest('#resort'))resortRoute({manual:true})});
+document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('a[data-first]');if(!a||!LIVE||Date.now()-LIVE.t>90000)return;
+let h=a.href.replace(/[?&]origin=[^&]*/,'');h+=(h.indexOf('?')>=0?'&':'?')+'origin='+LIVE.lat+','+LIVE.lng;a.href=h},true);
+$('autoloc').onchange=()=>{SET.auto=$('autoloc').checked;saveSet();LIVE=null;liveStart();liveSt()};
+$('locst').onclick=()=>{LIVE=null;liveStart(true);liveSt();toast('Memperbarui lokasi…')};
+$('autoloc').checked=SET.auto!==false;liveSt();
 </script>
 <script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});</script>
 </body>
